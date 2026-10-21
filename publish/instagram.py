@@ -10,7 +10,8 @@ upload_type=resumable, send the file to rupload.facebook.com, wait until it's FI
 then publish. That route needs Facebook Login (not Instagram Login).
 
 Setup (.env): INSTAGRAM_APP_ID / INSTAGRAM_APP_SECRET (the Meta app's id and secret;
-CLIPPER's app works), optional INSTAGRAM_FB_CONFIG_ID, and the redirect URI
+CLIPPER's app works), INSTAGRAM_USERNAME (which account to post to, when the
+Facebook login manages several), optional INSTAGRAM_FB_CONFIG_ID, and the redirect URI
 http://localhost:8765/auth/instagram/callback allowed in the app's Facebook Login settings.
 Limit: 100 API posts per account per 24 hours.
 """
@@ -83,6 +84,17 @@ def exchange_code(code: str, redirect_uri: str) -> dict:
         raise InstagramError("None of your Facebook Pages has an Instagram professional account linked "
                              f"(Pages the app can see: {names}). Link the Instagram account to a Page "
                              "(Page settings -> Linked accounts -> Instagram) and connect again.")
+    # Several Pages can have Instagram linked (e.g. CLIPPER's): never guess, pick the one in .env
+    want = os.environ.get("INSTAGRAM_USERNAME", "").strip().lstrip("@").lower()
+    if want:
+        linked = [p for p in linked if (p["instagram_business_account"].get("username") or "").lower() == want]
+        if not linked:
+            raise InstagramError(f"@{want} wasn't among the Instagram accounts Facebook shared. Connect again and "
+                                 "tick its Page (and the Instagram account) when Facebook asks.")
+    elif len(linked) > 1:
+        names = ", ".join("@" + (p["instagram_business_account"].get("username") or "?") for p in linked)
+        raise InstagramError(f"Facebook shared several Instagram accounts ({names}). Set INSTAGRAM_USERNAME in .env "
+                             "to the one to post to, then connect again.")
     page = linked[0]; ig = page["instagram_business_account"]
     return {"access_token": page["access_token"], "obtained_at": time.time(),
             "ig_id": str(ig["id"]), "username": ig.get("username"), "page": page.get("name")}

@@ -130,7 +130,7 @@ def _unauthorized_message(resp) -> str:
 
 
 def upload_video(access_token: str, video_path: Path, title: str, description: str,
-                 privacy_status: str = "private", synthetic_media: bool = True,
+                 privacy_status: str = "private", synthetic_media: bool = False,
                  publish_at: Optional[str] = None) -> str:
     """Upload as a Short; returns the video id. `publish_at` (RFC 3339, UTC) schedules it:
     uploaded private, YouTube makes it public at that time by itself.

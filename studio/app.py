@@ -157,7 +157,7 @@ class Post(BaseModel):
     description: str
     privacy: str = "private"
     publish_at: str = ""        # RFC 3339 UTC, schedules a YouTube upload
-    synthetic: bool = True
+    synthetic: bool = False
 
 
 def _run(job_id, fn):

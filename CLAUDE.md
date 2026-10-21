@@ -110,7 +110,8 @@
   spread by word length; Whisper alignment is still to do.
 - `studio/app.py` (localhost:8765) is where Dean watches and posts.
   - YouTube: CLIPPER's OAuth + resumable upload, category 28, `#Shorts`
-    added, the synthetic box ticked by default.
+    added. The synthetic box is **off** by default (Dean asked, Oct 2026);
+    it can still be ticked on the page.
   - Instagram: Facebook Login + resumable upload to rupload.facebook.com,
     because the laptop has no public URL.
   - Posting is always a click by Dean, with a confirm. Never post

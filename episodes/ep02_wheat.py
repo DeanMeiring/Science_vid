@@ -19,6 +19,7 @@ Facts checked (Oct 2026):
 """
 
 EXPERIMENT = 2
+VOICE = "kokoro:am_michael*0.55+am_santa*0.45"   # as posted; later episodes went back to george
 THEME = "farm"
 RULE = "RLR"                     # turn on grass, dirt, wheat
 CROPS = ["GRASS", "DIRT", "WHEAT"]

@@ -5,12 +5,14 @@ A voice spec is "<engine>:<voice>":
   kokoro:am_michael                    Kokoro (Apache-2.0)
   kokoro:am_michael*0.68+am_santa*0.32 a blend of Kokoro voices (weights are normalised)
 
-Farmer Joe's voice (Oct 2026, Dean's pick): a blend of Kokoro michael and santa.
+Farmer Joe's voice: Pocket TTS "george" (Experiment 1, and again from Experiment 3; Dean's pick).
+Episode 2 used a blend of Kokoro michael 55% + santa 45%, which Dean then decided against.
 Run Python with -X utf8 on Windows (pocket_tts reads its config in the locale charset otherwise).
 """
 import numpy as np
 
-FARMER_JOE = "kokoro:am_michael*0.55+am_santa*0.45"
+FARMER_JOE = "pocket:george"
+KOKORO_BLEND = "kokoro:am_michael*0.55+am_santa*0.45"     # Episode 2 only
 
 CREDITS = {
     "pocket": "Narration voice: Kyutai Pocket TTS, voice from the VCTK corpus (CC-BY-4.0).",

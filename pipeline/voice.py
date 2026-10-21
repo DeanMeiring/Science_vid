@@ -4,7 +4,7 @@ Usage: .venv/Scripts/python pipeline/voice.py episodes/ep01_farm.py
 Writes renders/<episode>/voice/NN.wav, voice.wav (the whole track) and timing.json.
 
 The voice is the episode's VOICE (a pipeline/tts.py spec); without one it's Farmer Joe's
-blend of Kokoro michael and santa. Changing the voice redoes every line.
+voice (Pocket TTS "george"). Changing the voice redoes every line.
 
 A line's spoken text can also be a list of (text, pause after in seconds) pieces, for comic
 timing: [("Whoa!", 1.3), ("I'm okay.", 1.4), ("Hat's okay too.", 0)]. The caption's words are

@@ -115,8 +115,13 @@
     because the laptop has no public URL.
   - Posting is always a click by Dean, with a confirm. Never post
     automatically.
-- First episode: farm theme. The farmer's trail is fresh grass that flashes
-  yellow-green (picked as a default, not by Dean yet).
+- First episode: farm theme. The farmer is **Farmer Joe** (Dean's name,
+  Oct 2026); he may become the mascot of the whole channel, with every
+  experiment given a farm twist. Not decided yet, and neither is the account
+  name. His trail is fresh grass that flashes yellow-green (picked as a
+  default, not by Dean yet).
+- The YouTube login in the studio is the channel "Caught On Code". Check
+  with Dean that this is the right channel before the first post.
 
 ## Voice
 - **Chosen voice (Oct 2026): Kyutai Pocket TTS preset `george`.** Dean's

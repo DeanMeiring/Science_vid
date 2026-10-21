@@ -1,6 +1,7 @@
 """Say the same narration in several free AI voices, so Dean can pick one.
 
 Usage: .venv/Scripts/python voice/samples.py            -> renders/voice_samples/*.wav
+       .venv/Scripts/python voice/samples.py --farmer   -> renders/voice_samples/farmer/*.wav (deep / older male voices)
 
 Kokoro (Apache-2.0) and Kyutai Pocket TTS preset voices (CC-BY-4.0), both on CPU.
 Numbers are spelled out for the voice; captions keep digits.
@@ -30,13 +31,24 @@ TEXT = ("Experiment number one. Put a farmer on a field of grass. "
 KOKORO = [("af_heart", "a"), ("am_michael", "a"), ("bf_emma", "b"), ("bm_george", "b")]
 POCKET = ["alba", "george", "jane", "michael"]
 
+# --farmer: natural deep / older male voices for Farmer Joe (no pitch tricks)
+FARMER_TEXT = ("Well howdy. Meet Farmer Joe. He's standing on a field of grass. "
+               "On grass, he turns right. On dirt, he turns left. "
+               "That's it. Two rules. Now let's speed it up.")
+FARMER_KOKORO = [("am_santa", "a"), ("am_onyx", "a"), ("am_fenrir", "a"), ("am_puck", "a"), ("am_eric", "a"),
+                 ("am_michael", "a")]
+FARMER_POCKET = ["bill_boerst", "peter_yearsley", "stuart_bell", "marius", "javert", "paul"]
+
 def write(path, audio, sr):
     pcm = np.clip(np.asarray(audio, np.float32).reshape(-1), -1, 1)
     with wave.open(str(path), "wb") as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr)
         w.writeframes((pcm * 32767).astype("<i2").tobytes())
 
-only = set(sys.argv[1:])
+only = set(a for a in sys.argv[1:] if not a.startswith("--"))
+if "--farmer" in sys.argv:
+    TEXT, KOKORO, POCKET = FARMER_TEXT, FARMER_KOKORO, FARMER_POCKET
+    OUT = OUT / "farmer"; OUT.mkdir(parents=True, exist_ok=True)
 from kokoro import KPipeline
 pipes = {}
 for voice, lang in KOKORO:

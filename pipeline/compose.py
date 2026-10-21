@@ -84,8 +84,9 @@ def wrap(words, f, maxw, dr):
 
 def caption_fn(words, active):
     def fn(dr):
-        y = 1560
-        for row in wrap([w.upper() for w in words], F_CAP, W - 140, dr):
+        rows = wrap([w.upper() for w in words], F_CAP, W - 140, dr)
+        y = min(1560, 1880 - 82 * len(rows))      # long lines move up so the last row stays on screen
+        for row in rows:
             txt = " ".join(w for w, _ in row)
             x = (W - dr.textlength(txt, font=F_CAP)) / 2
             for w, i in row:

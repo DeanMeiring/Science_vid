@@ -124,6 +124,22 @@ def to_screen(gx, gy):
     v = world_to_camera_view(sc.sc, sc.cam, Vector((gx, -gy, 0.0)))
     return [round(v.x * S.W, 1), round((1 - v.y) * S.H, 1)]
 
+def cam_yaw(tt, tl, ang):
+    yaw = -18 + 36 * (tt / DUR)   # slow orbit
+    if TRIP is not None and tl >= 0:
+        # swing round to see Joe's face (three-quarter front), then drift back as we zoom out
+        dur = tl_line["t1"] - tl_line["t0"]
+        w = smooth(tl / 0.8) * (1 - smooth((tl - dur + 0.35) / 1.2))
+        front = math.degrees(math.atan2(-math.cos(ang), -math.sin(ang))) + 55
+        yaw += ((front - yaw + 180) % 360 - 180) * w
+    return yaw
+
+def save_labels(f):
+    """Where the labels go: just above each field (pixels on the full-size frame)."""
+    import bpy; bpy.context.view_layer.update()
+    LABELS[str(f)] = [to_screen((oxs.min() + oxs.max() + 1) / 2, oys.min() - 3),
+                      to_screen((fx0 + fx1 + 1) / 2, fy0 - 3)]
+
 grid = np.zeros((N, N), np.uint8)
 prev = np.zeros((N, N), np.uint8)                # colour before the last change (blocks morph from it)
 last = np.full((N, N), -10 ** 9, np.int64)       # step of each cell's last flip
@@ -173,7 +189,11 @@ for f in range(end):
     cx += (tx_ - cx) * k; cy += (ty_ - cy) * k
     if f < args.start or f % args.every: continue
     path = out / f"f_{f:05d}.jpg"
-    if path.exists(): continue
+    if path.exists():
+        # already rendered; just fill in its label positions if they're missing
+        if CMP is not None and tt >= cmp_t0 - 0.5 and str(f) not in LABELS:
+            sc.set_camera(cx, cy, s_cur, cam_yaw(tt, tl, ang)); save_labels(f)
+        continue
     rate = (sched[min(f + 2, NF - 1)] - sched[max(f - 2, 0)]) / 4 * FPS
     heat_len = max(1.2, rate * 0.06)
     # cells: blocks morph from their old height to the new one; a block sinking back to grass keeps
@@ -200,19 +220,9 @@ for f in range(end):
     fall, hat = trip_pose(tl) if TRIP is not None else (0.0, None)
     sc.set_walker(pos[0] + 0.5, pos[1] + 0.5, az, ang, s_cur,
                   walk if tgt - sched[max(f - 1, 0)] <= 1 and walk < 1 else 0.0, fall=fall, hat=hat)
-    yaw = -18 + 36 * (tt / DUR)   # slow orbit
-    if TRIP is not None and tl >= 0:
-        # swing round to see Joe's face (three-quarter front), then drift back as we zoom out
-        dur = tl_line["t1"] - tl_line["t0"]
-        w = smooth(tl / 0.8) * (1 - smooth((tl - dur + 0.35) / 1.2))
-        front = math.degrees(math.atan2(-math.cos(ang), -math.sin(ang))) + 55
-        yaw += ((front - yaw + 180) % 360 - 180) * w
-    sc.set_camera(cx, cy, s_cur, yaw)
+    sc.set_camera(cx, cy, s_cur, cam_yaw(tt, tl, ang))
     if CMP is not None and tt >= cmp_t0 - 0.5:
-        # where the labels go: just above each field (pixels on the full-size frame)
-        import bpy; bpy.context.view_layer.update()
-        LABELS[str(f)] = [to_screen((oxs.min() + oxs.max() + 1) / 2, oys.min() - 3),
-                          to_screen((fx0 + fx1 + 1) / 2, fy0 - 3)]
+        save_labels(f)
         if rendered % 10 == 0: labels_path.write_text(json.dumps(LABELS))
     sc.render(path)
     rendered += 1

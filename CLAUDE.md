@@ -127,6 +127,14 @@
   - YouTube: the **Farmer Joe** channel (`@farmer-joe-1111`, id
     UCW4elsuFZaMRHhMRq6hKGZA). It showed as "Caught On Code" at first: that
     was the same channel under its old name.
+- **Instagram upload limit (found 21 Oct 2026):** through the API, Reels up
+  to ~50 s upload; 55 s and longer fail with "ProcessingFailedError /
+  Request processing failed" (size isn't the cause: 23 MB at 63 s fails,
+  27 MB at 45 s works). Undocumented, measured by test uploads with
+  `publish_reel(..., publish=False)`, which never posts. Longer videos: post
+  from the phone app, or keep episodes under ~50 s.
+- **Episode 2 posted to YouTube 21 Oct 2026, 21:45**
+  (https://youtube.com/shorts/OyYem3ntT3Y). Instagram failed (too long).
 - **Episode 1 posted 21 Oct 2026, 15:45**, public on both, via "Post to
   both": YouTube https://youtube.com/shorts/z1UEqgtLkpM and Instagram
   https://www.instagram.com/reel/Dewi-t-ErwB/. Next: Episode 2, "what

@@ -76,24 +76,29 @@
 - Script rule: every claim in a script must be checked by running the sim
   (or a solid source) before it goes in. No made-up facts.
 
-## Laptop: VS Code + Blender (next step)
-- Dean is moving this work to Claude Code in VS Code on his laptop so we can
-  use Blender and render locally.
-- **The laptop has no separate graphics card, but a very good CPU.** Plan:
-  - Blender headless (`blender -b -P script.py`), driven by Python.
-  - EEVEE on the built-in graphics if it works (estimate ~20-60 min per
-    47 s Short), or Cycles on the CPU with low samples + OpenImageDenoise
-    (estimate ~2-6 h, overnight).
-  - Instance one block mesh for all cells (geometry nodes / instancing),
-    simple materials, one soft light.
-  - Low-res drafts while tweaking.
-  - **First job:** build the Experiment #1 scene in Blender and benchmark
-    one frame in EEVEE vs Cycles on his laptop. Then Dean compares it with
-    the Pillow 3D look and picks one. These numbers are guesses until that
-    test.
+## Laptop: VS Code + Blender
+- **Windows 11**, Intel Core Ultra 7 265U (a 15 W laptop chip, 14 threads),
+  Intel built-in graphics, ~15 GB RAM.
+- **Be gentle on the laptop** (Dean asked): low priority, 4 render threads,
+  half-size EEVEE drafts, one render at a time. Ask before long or full-size
+  batches. `blender/ant_scene.py` defaults to this.
+- Blender 4.5 LTS is the portable zip in
+  `%LOCALAPPDATA%\Programs\Blender\blender-4.5.10-windows-x64\blender.exe`
+  (the installer needs admin rights). ffmpeg 9 is installed via winget.
+- `blender/ant_scene.py` renders one still: `blender -b -P blender/ant_scene.py
+  -- --step 12 --theme farm`. One block mesh is instanced on a point per
+  square (geometry nodes). Captions and counters stay in Pillow, laid over
+  the frames.
+- Benchmark (Oct 2026, 1080x1920, all threads):
+  - EEVEE: ~2 s/frame after a ~2 s warm-up, so ~45-50 min per 47 s Short.
+  - Cycles CPU, 48 samples: ~35 s/frame, so ~13 h per Short. Not worth it.
+- **Farm theme** (Dean's idea, being tried): a small farmer on a grass
+  field. On grass he turns right and digs it into dirt; on dirt he turns
+  left and it grows back. Ant theme kept as `--theme ant`.
 - Keep the Pillow renderer working as the fallback (and for automation
   later on Railway, where there's no GPU).
-- The OS isn't confirmed yet (Windows or Mac?). Ask him.
+- CLIPPER is cloned next to this repo at `C:\ANALYSIS\ANALYSIS\CLIPPER`
+  (Dean OK'd it) to copy code from.
 
 ## Voice
 - Narration is a cloned voice, most likely **Dean's friend's** (he's keen).

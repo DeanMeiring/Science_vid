@@ -11,6 +11,7 @@ _a.wav
 voices/
 # secrets
 .env
+.tokens/
 *_token*.json
 # python
 __pycache__/

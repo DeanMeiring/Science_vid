@@ -1,2 +1,11 @@
 numpy>=2.0
 pillow>=10.0
+# narration (Kyutai Pocket TTS on CPU; pulls in torch)
+pocket-tts>=4.0
+soundfile
+# studio (watch + post)
+fastapi
+uvicorn
+requests
+# only for voice/samples.py
+# kokoro>=0.9.2

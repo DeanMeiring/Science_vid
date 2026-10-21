@@ -136,7 +136,8 @@
 
 ## Voice
 - **Farmer Joe's voice (from Episode 2, Oct 2026): a blend of Kokoro
-  `am_michael` 68% + `am_santa` 32%** (`FARMER_JOE` in `pipeline/tts.py`).
+  `am_michael` 55% + `am_santa` 45%** (`FARMER_JOE` in `pipeline/tts.py`).
+  Dean first had 68/32, then asked for "santa a bit more, 55/45".
   - Dean picked it after hearing deep natural male voices; he liked michael,
     santa and Pocket bill_boerst, and asked for a mix ("michael 75 santa
     35", read as about 68/32). The 75/25 and 65/35 versions are in

@@ -10,7 +10,7 @@ Run Python with -X utf8 on Windows (pocket_tts reads its config in the locale ch
 """
 import numpy as np
 
-FARMER_JOE = "kokoro:am_michael*0.68+am_santa*0.32"
+FARMER_JOE = "kokoro:am_michael*0.55+am_santa*0.45"
 
 CREDITS = {
     "pocket": "Narration voice: Kyutai Pocket TTS, voice from the VCTK corpus (CC-BY-4.0).",

@@ -42,7 +42,13 @@ THEMES = {
 def gentle():
     """Below-normal process priority, so the laptop stays usable while rendering."""
     if sys.platform == "win32":
-        ctypes.windll.kernel32.SetPriorityClass(ctypes.windll.kernel32.GetCurrentProcess(), 0x4000)
+        k32 = ctypes.windll.kernel32
+        # handles are pointer-sized: without these types the handle gets cut to 32 bits and the
+        # call silently fails (renders ran at normal priority until Oct 2026)
+        k32.GetCurrentProcess.restype = ctypes.c_void_p
+        k32.SetPriorityClass.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+        if not k32.SetPriorityClass(k32.GetCurrentProcess(), 0x4000):   # BELOW_NORMAL_PRIORITY_CLASS
+            print("warning: couldn't lower the process priority", flush=True)
 
 def _node(nt, kind, **ops):
     n = nt.nodes.new(kind)

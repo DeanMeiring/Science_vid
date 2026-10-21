@@ -134,6 +134,16 @@
   simulation first), and give the video Joe the profile picture's face
   (eyes, cheeks, moustache).
 
+- **Episode 2 (Oct 2026):** Joe narrates himself (first person), plants
+  wheat (rule RLR, no highway in 2M simulated steps; Wikipedia says it's
+  unknown whether RLR ever builds one), trips near the end (`trip` mode),
+  and the conclusion zooms out over one farm with Episode 1's field rising
+  beyond today's, each labelled. Dean liked the trip gag and the bald head
+  under the hat.
+- **From Experiment 3, Dean wants to try a more amateur, personal feel.**
+  The polished look is "very good", but he wants it less slick. Try a few
+  different setups and show samples before committing.
+
 ## Voice
 - **Farmer Joe's voice (from Episode 2, Oct 2026): a blend of Kokoro
   `am_michael` 55% + `am_santa` 45%** (`FARMER_JOE` in `pipeline/tts.py`).

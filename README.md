@@ -1,0 +1,60 @@
+# Science_vid
+
+YouTube Shorts (later long-form) of maths and science experiments: simple
+rules, surprising results. Each video is one "experiment", explained by a
+narrator while it runs: zoomed in on the rules first, then zooming out as it
+speeds up. Each episode changes one thing from the last.
+
+First episode: **Experiment #1, Langton's Ant** (prototype in `prototypes/`).
+
+## Set up the laptop (once)
+
+1. Install:
+   - [VS Code](https://code.visualstudio.com/) and the **Claude Code**
+     extension (Extensions panel, search "Claude Code").
+   - [Git](https://git-scm.com/downloads).
+   - [Python 3.11](https://www.python.org/downloads/). On Windows, tick
+     "Add python.exe to PATH" in the installer.
+   - [ffmpeg](https://ffmpeg.org/download.html). On Windows, run
+     `winget install Gyan.FFmpeg`. On Mac, run `brew install ffmpeg`.
+   - [Blender](https://www.blender.org/download/) (latest LTS).
+2. Clone the repo and open it in VS Code:
+
+   ```
+   git clone https://github.com/DeanMeiring/Science_vid.git
+   cd Science_vid
+   code .
+   ```
+
+3. Make a Python environment and install the packages:
+
+   ```
+   python -m venv .venv
+   # Windows:  .venv\Scripts\activate
+   # Mac:      source .venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+4. For the voice cloning, set up a free Hugging Face account:
+   - Sign up at huggingface.co.
+   - Accept the terms at huggingface.co/kyutai/pocket-tts.
+   - Make a read token (Settings → Access Tokens).
+   - Claude will ask for it when setting up the voice.
+5. Open Claude Code in VS Code and say:
+   "read CLAUDE.md and let's continue".
+
+## Run the prototypes
+
+```
+python prototypes/ant_3d.py experiment_1_3d.mp4      # 3D look (~5-10 min)
+python prototypes/ant_3d.py out.mp4 60,700,1050      # just 3 preview frames
+python prototypes/ant_2d.py experiment_1_2d.mp4      # flat look (~3 min)
+python prototypes/gallery.py ideas.jpg               # stills of 9 experiments
+```
+
+Renders (`*.mp4`, `*.wav`) and voice samples (`voices/`) are kept out of git.
+
+## Fonts
+
+Anton, Inter and Source Serif 4 are in `assets/fonts`, under the SIL Open
+Font License (see the `OFL-*.txt` files).

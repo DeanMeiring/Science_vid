@@ -126,6 +126,12 @@
   - YouTube: the **Farmer Joe** channel (`@farmer-joe-1111`, id
     UCW4elsuFZaMRHhMRq6hKGZA). It showed as "Caught On Code" at first: that
     was the same channel under its old name.
+- **Episode 1 posted 21 Oct 2026, 15:45**, public on both, via "Post to
+  both": YouTube https://youtube.com/shorts/z1UEqgtLkpM and Instagram
+  https://www.instagram.com/reel/Dewi-t-ErwB/. Next: Episode 2, "what
+  happens when Joe plants a third crop?" (check the 3-colour rule by
+  simulation first), and give the video Joe the profile picture's face
+  (eyes, cheeks, moustache).
 
 ## Voice
 - **Chosen voice (Oct 2026): Kyutai Pocket TTS preset `george`.** Dean's

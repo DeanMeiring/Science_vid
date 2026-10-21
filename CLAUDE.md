@@ -120,8 +120,11 @@
   experiment given a farm twist. Not decided yet, and neither is the account
   name. His trail is fresh grass that flashes yellow-green (picked as a
   default, not by Dean yet).
-- The YouTube login in the studio is the channel "Caught On Code". Check
-  with Dean that this is the right channel before the first post.
+- Accounts connected in the studio (Oct 2026):
+  - Instagram: **@farmerjoe1111**, a Creator account linked to the Farmer
+    Joe Facebook Page. `INSTAGRAM_USERNAME` in `.env` pins it.
+  - YouTube: **Caught On Code**. Check with Dean that this is the right
+    channel for Farmer Joe before the first post.
 
 ## Voice
 - **Chosen voice (Oct 2026): Kyutai Pocket TTS preset `george`.** Dean's

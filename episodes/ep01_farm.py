@@ -13,6 +13,7 @@ Facts checked by simulation (Oct 2026, this rule: grass -> turn right, dirt -> t
 """
 
 EXPERIMENT = 1
+VOICE = "pocket:george"     # as posted; new episodes use Farmer Joe's voice (pipeline/tts.py)
 THEME = "farm"
 HIGHWAY = 9977
 

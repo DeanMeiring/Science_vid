@@ -1,7 +1,10 @@
-"""Narrate an episode in the chosen voice and work out the timing of every line.
+"""Narrate an episode in its voice and work out the timing of every line.
 
 Usage: .venv/Scripts/python pipeline/voice.py episodes/ep01_farm.py
 Writes renders/<episode>/voice/NN.wav, voice.wav (the whole track) and timing.json.
+
+The voice is the episode's VOICE (a pipeline/tts.py spec); without one it's Farmer Joe's
+blend of Kokoro michael and santa. Changing the voice redoes every line.
 
 Each line's real length sets how long the simulation spends on it. Caption words are
 spread over the spoken part of the line by word length (a Whisper alignment can
@@ -18,8 +21,8 @@ import torch
 torch.set_num_threads(4)   # keep the laptop usable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import ROOT, load_episode, load_env
+from tts import FARMER_JOE, Voice
 
-VOICE = "george"           # Pocket TTS preset, VCTK p315, CC-BY-4.0 (credit in the description)
 SR_OUT = 48000
 LEAD = 0.4                 # silence before the first line
 GAP = 0.45                 # pause after each line
@@ -36,15 +39,19 @@ def main():
     ep_path = Path(sys.argv[1]); ep = load_episode(ep_path)
     load_env()
     out = ROOT / "renders" / ep_path.stem; (out / "voice").mkdir(parents=True, exist_ok=True)
-    from pocket_tts import TTSModel
-    model = TTSModel.load_model()
-    state = model.get_state_for_audio_prompt(VOICE)
-    sr = model.sample_rate
+    spec = getattr(ep, "VOICE", FARMER_JOE)
+    old = json.loads((out / "timing.json").read_text()) if (out / "timing.json").exists() else {}
+    was = old.get("voice")
+    if was and ":" not in was: was = "pocket:" + was      # older timing files named only the preset
+    if was not in (None, spec):   # another voice made these lines: start over
+        for f in (out / "voice").glob("*.wav"): f.unlink()
+    voice = Voice(spec)
+    sr = voice.sample_rate
     lines, clips, t = [], [], LEAD
     for i, (caption, say, mode, target) in enumerate(ep.SCRIPT):
         wav = out / "voice" / f"{i:02d}.wav"
         if not wav.exists():   # re-runs only redo missing lines (delete a file to redo it)
-            a = model.generate_audio(state, say or caption).detach().cpu().numpy().reshape(-1)
+            a = voice.say(say or caption)
             s0, s1 = voiced_span(a, sr)
             a = a[max(0, int((s0 - 0.05) * sr)):int((s1 + 0.12) * sr)]
             with wave.open(str(wav), "wb") as w:
@@ -52,6 +59,7 @@ def main():
                 w.writeframes((np.clip(a, -1, 1) * 32767).astype("<i2").tobytes())
             print(f"line {i}: {len(a) / sr:.1f}s  {caption}", flush=True)
         with wave.open(str(wav)) as w:
+            sr = w.getframerate()
             a = np.frombuffer(w.readframes(w.getnframes()), "<i2").astype(np.float32) / 32767
         speech = len(a) / sr
         dur = max(speech, MIN_DUR.get(mode, 0))
@@ -74,7 +82,7 @@ def main():
     with wave.open(str(out / "voice.wav"), "wb") as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR_OUT)
         w.writeframes((np.clip(track, -1, 1) * 32767).astype("<i2").tobytes())
-    (out / "timing.json").write_text(json.dumps(dict(duration=dur, voice=VOICE, lines=lines), indent=1))
+    (out / "timing.json").write_text(json.dumps(dict(duration=dur, voice=spec, credit=voice.credit, lines=lines), indent=1))
     print(f"timing: {dur:.1f}s, {len(lines)} lines -> {out / 'timing.json'}")
 
 if __name__ == "__main__":

@@ -135,7 +135,21 @@
   (eyes, cheeks, moustache).
 
 ## Voice
-- **Chosen voice (Oct 2026): Kyutai Pocket TTS preset `george`.** Dean's
+- **Farmer Joe's voice (from Episode 2, Oct 2026): a blend of Kokoro
+  `am_michael` 68% + `am_santa` 32%** (`FARMER_JOE` in `pipeline/tts.py`).
+  - Dean picked it after hearing deep natural male voices; he liked michael,
+    santa and Pocket bill_boerst, and asked for a mix ("michael 75 santa
+    35", read as about 68/32). The 75/25 and 65/35 versions are in
+    `renders/voice_samples/mix/RATIOS.mp3` if he wants to adjust.
+  - Pitch-shifted "cartoon" voices (`voice/cartoon.py`) sounded weird to
+    him. Keep voices natural.
+  - A real Texan accent isn't available free. Options he was given: a
+    consenting person with a Southern accent records 30 s for a Pocket
+    clone, a paid service (needs his OK), or his own voice clone.
+  - Kokoro is Apache-2.0. Credit line: `credit` in `timing.json`
+    ("Narration voice: Kokoro TTS (Apache-2.0)."). Episode 1 stays on
+    `pocket:george` (its `VOICE`), as posted.
+- **Episode 1's voice: Kyutai Pocket TTS preset `george`.** Dean's
   friend wasn't available, and Dean has no good mic, so he picked from 8
   free voices (`voice/samples.py`, Kokoro + Pocket presets).
   - `george` is VCTK speaker p315, licensed CC-BY-4.0: commercial use is

@@ -100,6 +100,24 @@
 - CLIPPER is cloned next to this repo at `C:\ANALYSIS\ANALYSIS\CLIPPER`
   (Dean OK'd it) to copy code from.
 
+## Episode pipeline and studio (Oct 2026)
+- `episodes/epNN_*.py` holds the script: (caption, spoken text, mode,
+  target step), rule cards, title, description.
+- The steps: `pipeline/voice.py` (narration + `timing.json`) →
+  `blender/render_video.py` (frames) → `pipeline/compose.py` (captions,
+  sound, mp4 + thumbnail). Commands are in the README.
+- Real line lengths from the voice set the timing. Caption words are
+  spread by word length; Whisper alignment is still to do.
+- `studio/app.py` (localhost:8765) is where Dean watches and posts.
+  - YouTube: CLIPPER's OAuth + resumable upload, category 28, `#Shorts`
+    added, the synthetic box ticked by default.
+  - Instagram: Facebook Login + resumable upload to rupload.facebook.com,
+    because the laptop has no public URL.
+  - Posting is always a click by Dean, with a confirm. Never post
+    automatically.
+- First episode: farm theme. The farmer's trail is fresh grass that flashes
+  yellow-green (picked as a default, not by Dean yet).
+
 ## Voice
 - **Chosen voice (Oct 2026): Kyutai Pocket TTS preset `george`.** Dean's
   friend wasn't available, and Dean has no good mic, so he picked from 8

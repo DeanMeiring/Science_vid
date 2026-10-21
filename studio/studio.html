@@ -187,11 +187,12 @@ function select(name, refresh = false) {
   $('ep-name').textContent = `Experiment #${cur.experiment ?? '?'}`;
   const badge = $('badge');
   badge.className = 'badge ' + (cur.video ? (cur.draft ? 'draft' : 'ready') : '');
-  badge.textContent = cur.video ? (cur.draft ? 'Draft (half size)' : 'Ready to post') : 'Not rendered';
+  badge.textContent = cur.video ? (cur.draft ? 'Draft: choppy on purpose' : 'Ready to post') : 'Not rendered';
+  badge.title = cur.draft ? 'Quick timing check: about 1 frame per second at half size. The finished video is a smooth 30 fps.' : '';
   $('dur').textContent = cur.duration ? `${cur.duration.toFixed(1)} s` : '';
   const pct = cur.frames_total ? Math.min(100, Math.round(100 * cur.frames / cur.frames_total)) : 0;
   $('render').innerHTML = (cur.draft || !cur.video) && cur.frames_total
-    ? `<p class="hint">Full-size render: ${cur.frames.toLocaleString()} / ${cur.frames_total.toLocaleString()} frames (${pct}%)</p><div class="bar"><i style="width:${pct}%"></i></div>` : '';
+    ? `<p class="hint">Showing the quick draft (about 1 frame per second, so it looks choppy). The smooth 30 fps video replaces it when the full render is done.</p><p class="hint">Full-size render: ${cur.frames.toLocaleString()} / ${cur.frames_total.toLocaleString()} frames (${pct}%)</p><div class="bar"><i style="width:${pct}%"></i></div>` : '';
   // a background refresh keeps what's being typed and doesn't restart the video
   if (!refresh || cur.video !== prevVideo)
     $('phone').innerHTML = cur.video ? `<video src="${cur.video}" controls playsinline preload="metadata"></video>` : '<div class="empty">No video yet</div>';

@@ -140,10 +140,9 @@
   Dean first had 68/32, then asked for "santa a bit more, 55/45".
   - Dean picked it after hearing deep natural male voices; he liked michael,
     santa and Pocket bill_boerst, and asked for a mix ("michael 75 santa
-    35", read as about 68/32). The 75/25 and 65/35 versions are in
-    `renders/voice_samples/mix/RATIOS.mp3` if he wants to adjust.
-  - Pitch-shifted "cartoon" voices (`voice/cartoon.py`) sounded weird to
-    him. Keep voices natural.
+    35", read as about 68/32). Sample: `renders/voice_samples/FARMER_JOE_55_45.wav`.
+  - Pitch-shifted "cartoon" voices sounded weird to him (the tool was
+    removed). Keep voices natural.
   - A real Texan accent isn't available free. Options he was given: a
     consenting person with a Southern accent records 30 s for a Pocket
     clone, a paid service (needs his OK), or his own voice clone.

@@ -6,6 +6,10 @@ Writes renders/<episode>/voice/NN.wav, voice.wav (the whole track) and timing.js
 The voice is the episode's VOICE (a pipeline/tts.py spec); without one it's Farmer Joe's
 blend of Kokoro michael and santa. Changing the voice redoes every line.
 
+A line's spoken text can also be a list of (text, pause after in seconds) pieces, for comic
+timing: [("Whoa!", 1.3), ("I'm okay.", 1.4), ("Hat's okay too.", 0)]. The caption's words are
+shared out over the pieces in order (so the caption should have the same words).
+
 Each line's real length sets how long the simulation spends on it. Caption words are
 spread over the spoken part of the line by word length (a Whisper alignment can
 replace this later, as in CLIPPER's longform_beats).
@@ -26,7 +30,7 @@ from tts import FARMER_JOE, Voice
 SR_OUT = 48000
 LEAD = 0.4                 # silence before the first line
 GAP = 0.45                 # pause after each line
-MIN_DUR = {"single": 3.2, "land": 3.0}
+MIN_DUR = {"single": 3.2, "land": 3.0, "trip": 4.5}
 
 def voiced_span(a, sr):
     """Start/end (s) of the part above the noise floor, so word timings ignore silence."""
@@ -34,6 +38,17 @@ def voiced_span(a, sr):
     e = np.sqrt(np.convolve(a ** 2, np.ones(k) / k, "same"))
     on = np.nonzero(e > max(1e-4, e.max() * 0.05))[0]
     return (on[0] / sr, on[-1] / sr) if len(on) else (0.0, len(a) / sr)
+
+def speech_spans(a, sr, n, min_gap=0.5):
+    """The n spoken pieces of a line: split it at its n-1 longest silences (each >= min_gap s)."""
+    if n == 1: return [voiced_span(a, sr)]
+    k = int(0.02 * sr)
+    e = np.sqrt(np.convolve(a ** 2, np.ones(k) / k, "same")); on = e > max(1e-4, e.max() * 0.05)
+    idx = np.nonzero(on)[0]
+    gaps = [(idx[j + 1] - idx[j], idx[j], idx[j + 1]) for j in range(len(idx) - 1) if idx[j + 1] - idx[j] > min_gap * sr]
+    cut = sorted(sorted(gaps, reverse=True)[:n - 1], key=lambda g: g[1])
+    bounds = [idx[0]] + sum(([g[1], g[2]] for g in cut), []) + [idx[-1]]
+    return [(bounds[2 * j] / sr, bounds[2 * j + 1] / sr) for j in range(len(bounds) // 2)]
 
 def main():
     ep_path = Path(sys.argv[1]); ep = load_episode(ep_path)
@@ -50,10 +65,14 @@ def main():
     lines, clips, t = [], [], LEAD
     for i, (caption, say, mode, target) in enumerate(ep.SCRIPT):
         wav = out / "voice" / f"{i:02d}.wav"
+        pieces = say if isinstance(say, (list, tuple)) else [(say or caption, 0.0)]
         if not wav.exists():   # re-runs only redo missing lines (delete a file to redo it)
-            a = voice.say(say or caption)
-            s0, s1 = voiced_span(a, sr)
-            a = a[max(0, int((s0 - 0.05) * sr)):int((s1 + 0.12) * sr)]
+            parts = []
+            for text, pause in pieces:
+                a = voice.say(text)
+                s0, s1 = voiced_span(a, sr)
+                parts += [a[max(0, int((s0 - 0.05) * sr)):int((s1 + 0.12) * sr)], np.zeros(int(pause * sr), np.float32)]
+            a = np.concatenate(parts)
             with wave.open(str(wav), "wb") as w:
                 w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr)
                 w.writeframes((np.clip(a, -1, 1) * 32767).astype("<i2").tobytes())
@@ -63,11 +82,18 @@ def main():
             a = np.frombuffer(w.readframes(w.getnframes()), "<i2").astype(np.float32) / 32767
         speech = len(a) / sr
         dur = max(speech, MIN_DUR.get(mode, 0))
-        s0, s1 = voiced_span(a, sr)
         words = caption.split()
-        wt = np.array([len(w.strip(".,:?'")) + 2.5 for w in words], float)
-        ends = t + s0 + np.cumsum(wt) / wt.sum() * (s1 - s0)
-        starts = np.concatenate([[t + s0], ends[:-1]])
+        # where each piece is spoken (pieces are separated by silences)
+        spans = speech_spans(a, sr, len(pieces))
+        counts = [len(str(text).split()) for text, _ in pieces]
+        if len(pieces) == 1 or sum(counts) != len(words) or len(spans) != len(pieces):
+            spans, counts = [voiced_span(a, sr)], [len(words)]
+        starts, ends, i = [], [], 0
+        for (s0, s1), n in zip(spans, counts):
+            ws = words[i:i + n]; i += n
+            wt = np.array([len(w.strip(".,:?'!")) + 2.5 for w in ws], float)
+            e = t + s0 + np.cumsum(wt) / wt.sum() * (s1 - s0)
+            starts += [t + s0] + list(e[:-1]); ends += list(e)
         lines.append(dict(text=caption, mode=mode, target=target, t0=t, t1=t + dur + GAP, speech=speech,
                           words=[[w, float(a_), float(b_)] for w, a_, b_ in zip(words, starts, ends)]))
         clips.append((t, a))

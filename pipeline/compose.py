@@ -3,6 +3,7 @@ and write the finished Short.
 
 Usage: .venv/Scripts/python pipeline/compose.py episodes/ep01_farm.py [--draft]
   --draft uses frames_draft (half size, every n-th frame) for a quick timing check.
+  --clip 30.5 39.5 makes just that stretch (seconds), e.g. to check one moment.
 Writes renders/<episode>/<episode>[_draft].mp4 (and a thumbnail .jpg).
 
 Overlays and sound design come from prototypes/ant_3d.py.
@@ -18,6 +19,7 @@ from common import FPS, ROOT, ffmpeg, load_episode, load_timeline, simulate
 ap = argparse.ArgumentParser()
 ap.add_argument("episode")
 ap.add_argument("--draft", action="store_true")
+ap.add_argument("--clip", nargs=2, type=float, metavar=("FROM", "TO"))
 args = ap.parse_args()
 
 W, H = 1080, 1920
@@ -28,14 +30,15 @@ ep_path = Path(args.episode).resolve(); ep = load_episode(ep_path)
 ep_dir = ROOT / "renders" / ep_path.stem
 lines, DUR, NF, sched = load_timeline(ep_dir)
 TOTAL = int(sched.max())
-moves, hist = simulate(TOTAL)
+moves, hist = simulate(TOTAL, getattr(ep, "RULE", "RL"))
 frames_dir = ep_dir / ("frames_draft" if args.draft else "frames")
 have = sorted(int(p.stem[2:]) for p in frames_dir.glob("f_*.jpg"))
 if not have:
     sys.exit(f"no frames in {frames_dir} -- run blender/render_video.py first")
-if not args.draft and len(have) < NF:
+F0, F1 = (int(args.clip[0] * FPS), min(NF, int(args.clip[1] * FPS))) if args.clip else (0, NF)
+if not args.draft and len(have) < NF and not args.clip:
     sys.exit(f"only {len(have)}/{NF} frames rendered in {frames_dir} -- finish the render, or use --draft")
-OUT = ep_dir / f"{ep_path.stem}{'_draft' if args.draft else ''}.mp4"
+OUT = ep_dir / f"{ep_path.stem}{'_draft' if args.draft else ''}{'_clip' if args.clip else ''}.mp4"
 
 # ---------------- text layers (cropped to their box for speed) ----------------
 F_CAP = font("Inter-Black.ttf", 66); F_CNT = font("Anton.ttf", 110); F_LAB = font("Inter-Black.ttf", 40)
@@ -92,7 +95,7 @@ def caption_fn(words, active):
             y += 82
     return fn
 
-SWATCH = {"farm": [(110, 176, 64), (120, 80, 48)], "ant": [(238, 240, 248), (18, 22, 40)]}[ep.THEME]
+SWATCH = {"farm": [(110, 176, 64), (120, 80, 48), (222, 178, 70)], "ant": [(238, 240, 248), (18, 22, 40)]}[ep.THEME]
 ACTIVE = {"farm": (236, 160, 40, 240), "ant": (255, 70, 160, 240)}[ep.THEME]
 def rules_fn(active):
     def fn(dr):
@@ -125,10 +128,12 @@ def title_fn(alpha):
 ff = subprocess.Popen([ffmpeg(), "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
                        "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "medium", "-crf", "19",
                        "-pix_fmt", "yuv420p", str(ep_dir / "_v.mp4")], stdin=subprocess.PIPE)
-r0, r1 = ep.RULE_LINES; hl = lines[ep.HIGHWAY_LINE]
+r0, r1 = ep.RULE_LINES
+hl = lines[ep.HIGHWAY_LINE] if getattr(ep, "HIGHWAY", None) else None    # the highway moment, if there is one
+TRIP = getattr(ep, "TRIP_LINE", None); trl = lines[TRIP] if TRIP is not None else None
 src_i = 0; base = None; base_f = -1
 thumb = None
-for f in range(NF):
+for f in range(F0, F1):
     tt = f / FPS
     while src_i + 1 < len(have) and have[src_i + 1] <= f: src_i += 1
     if have[src_i] != base_f:
@@ -138,7 +143,7 @@ for f in range(NF):
     img = base.copy()
     done = int(sched[f]); under = int(hist[done][3])
     rate = (sched[min(f + 2, NF - 1)] - sched[max(f - 2, 0)]) / 4 * FPS
-    if ep.HIGHWAY <= done and abs(tt - hl["t1"]) < 0.25:          # flash as the highway starts
+    if hl and ep.HIGHWAY <= done and abs(tt - hl["t1"]) < 0.25:          # flash as the highway starts
         img += (1 - abs(tt - hl["t1"]) / 0.25) * 60
     if tt < lines[1]["t0"] + 0.3:
         al = round(min(1, (lines[1]["t0"] + 0.3 - tt) / 0.3), 2)
@@ -146,8 +151,10 @@ for f in range(NF):
     elif lines[r0]["t0"] <= tt < lines[r1]["t1"]:
         comp(img, layer(("rules", under), rules_fn(under)))
     elif tt >= lines[r1]["t1"]:
-        if hl["t0"] <= tt < hl["t1"] + 0.6 and rate < 600:
+        if hl and hl["t0"] <= tt < hl["t1"] + 0.6 and rate < 600:
             spd = "SLOW MOTION"
+        elif trl and trl["t0"] <= tt < trl["t1"]:
+            spd = "PAUSED"
         else:
             spd = f"SPEED ×{int(round(rate, -1 if rate < 1000 else -2)):,}" if rate > 4 else ""
         comp(img, layer(("cnt", done, spd), counter_fn(done, spd)))
@@ -156,11 +163,13 @@ for f in range(NF):
             act = max([i for i, (_, a, _) in enumerate(ln["words"]) if a <= tt] or [0])
             comp(img, layer(("cap", ln["text"], act), caption_fn([w for w, _, _ in ln["words"]], act)))
     frame = np.clip(img, 0, 255).astype(np.uint8)
-    if thumb is None and tt >= hl["t1"] + 1.5: thumb = frame   # the highway just after it starts
+    # thumbnail: the highway just after it starts, or Joe flat on his face, or 60% through
+    when = hl["t1"] + 1.5 if hl else trl["t0"] + 1.3 if trl else DUR * 0.6
+    if thumb is None and tt >= when: thumb = frame
     ff.stdin.write(frame.tobytes())
     if f % 150 == 0: print("frame", f, "/", NF, flush=True)
 ff.stdin.close(); ff.wait()
-if thumb is not None:
+if thumb is not None and not args.clip:
     Image.fromarray(thumb).save(OUT.with_suffix(".jpg"), quality=90)
 
 # ---------------- sound ----------------
@@ -175,8 +184,8 @@ for f in range(NF):   # a tick per step while slow (higher on dirt)
     if 0 < n <= 2:
         for i in range(n):
             L = int(0.06 * SR); t_ = np.arange(L) / SR
-            hi = 1 if hist[sched[f] - n + i][3] else 0
-            tk = (np.sin(2 * np.pi * (900 + 500 * hi) * t_) * np.exp(-t_ * 70) + rng.normal(0, .3, L) * np.exp(-t_ * 250)) * 0.3
+            hi = hist[sched[f] - n + i][3]            # higher tick for each later colour
+            tk = (np.sin(2 * np.pi * (900 + 400 * hi) * t_) * np.exp(-t_ * 70) + rng.normal(0, .3, L) * np.exp(-t_ * 250)) * 0.3
             o = int(f / FPS * SR) + int(i * SR / FPS / n); au[o:o + L] += tk
 rate = np.gradient(sched.astype(float)) * FPS
 amp = np.clip((np.log10(np.maximum(rate, 1)) - 0.8) / 2.6, 0, 1)
@@ -185,20 +194,29 @@ fr = 60 + 55 * np.log10(np.maximum(np.interp(np.arange(au.size), np.arange(NF) *
 ph = np.cumsum(2 * np.pi * fr / SR)
 noise = lp(rng.normal(0, 1, au.size), 25)
 au += amp_s * 0.16 * (np.sin(ph) + 0.35 * np.sin(2 * ph) + 0.18 * np.sin(3.01 * ph) + noise * 2.5)
-T = hl["t1"]; o = int(T * SR)               # riser into the highway moment, then a boom
-L = int(2.4 * SR); t_ = np.arange(L) / SR
-au[o - L:o] += lp(rng.normal(0, 1, L), 30) * (t_ / 2.4) ** 2 * 2.2
-L = int(2.5 * SR); t_ = np.arange(L) / SR
-au[o:o + L] += np.sin(2 * np.pi * (60 - 22 * np.minimum(t_, 1)) * t_) * np.exp(-t_ * 2.2) * 0.75 \
-               + lp(rng.normal(0, 1, L), 8) * np.exp(-t_ * 5) * 0.6
+if hl:
+    T = hl["t1"]; o = int(T * SR)               # riser into the highway moment, then a boom
+    L = int(2.4 * SR); t_ = np.arange(L) / SR
+    au[o - L:o] += lp(rng.normal(0, 1, L), 30) * (t_ / 2.4) ** 2 * 2.2
+    L = int(2.5 * SR); t_ = np.arange(L) / SR
+    au[o:o + L] += np.sin(2 * np.pi * (60 - 22 * np.minimum(t_, 1)) * t_) * np.exp(-t_ * 2.2) * 0.75 \
+                   + lp(rng.normal(0, 1, L), 8) * np.exp(-t_ * 5) * 0.6
+if trl:
+    # the trip: a thud as Joe hits the dirt, then a soft pat as his hat lands
+    for t_hit, f0_, amp_, dec in ((trl["t0"] + 0.30, 70, 0.9, 9), (trl["t0"] + 0.60, 180, 0.25, 30)):
+        o = int(t_hit * SR); L = int(0.5 * SR); t_ = np.arange(L) / SR
+        au[o:o + L] += (np.sin(2 * np.pi * f0_ * t_) * np.exp(-t_ * dec)
+                        + lp(rng.normal(0, 1, L), 6) * np.exp(-t_ * dec * 3) * 0.8) * amp_
 au /= np.abs(au).max() / 0.85
 with wave.open(str(ep_dir / "voice.wav")) as w:
     vo = np.frombuffer(w.readframes(w.getnframes()), "<i2").astype(np.float32) / 32767
 vo = np.pad(vo, (0, max(0, au.size - vo.size)))[:au.size]
+if args.clip:   # just the clip's stretch of sound
+    a0, a1 = int(F0 / FPS * SR), int(F1 / FPS * SR); au, vo = au[a0:a1], vo[a0:a1]
 # duck the effects under the voice
 env = lp(np.abs(vo), 2400); duck = 1 - 0.55 * np.clip(env / (env.max() * 0.25 + 1e-9), 0, 1)
 mix = au * 0.45 * duck + vo / (np.abs(vo).max() + 1e-9) * 0.9
-fade = np.ones_like(mix); n2 = int(1.2 * SR); fade[-n2:] = np.linspace(1, 0, n2)
+fade = np.ones_like(mix); n2 = int((0.3 if args.clip else 1.2) * SR); fade[-n2:] = np.linspace(1, 0, n2)
 mix *= fade; mix /= max(1.0, np.abs(mix).max() / 0.95)
 with wave.open(str(ep_dir / "_a.wav"), "wb") as w:
     w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR); w.writeframes((mix * 32767).astype(np.int16).tobytes())

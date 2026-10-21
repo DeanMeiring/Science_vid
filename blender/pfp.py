@@ -27,22 +27,11 @@ c = N // 2
 dirt = [(c + 1, c - 1), (c + 2, c - 1), (c + 1, c - 2), (c - 1, c - 2), (c + 2, c + 1), (c - 2, c - 1)]
 for x, y in dirt: grid[y, x] = 1
 xs = np.array([d[0] for d in dirt]); ys = np.array([d[1] for d in dirt])
-sc.set_cells(xs, ys, np.ones(len(xs)), np.zeros(len(xs)), np.ones(len(xs), np.float32))
+sc.set_cells(xs, ys, np.full(len(xs), sc.HB), np.zeros(len(xs)), np.ones(len(xs), np.float32))
 sc.set_tufts(grid, c + 0.5, c + 0.5, 120, per=10)
 sc.set_floor(120)
 
-# ---- extra character for the close-up: bigger eyes with highlights, rosy cheeks, a moustache ----
-def blob(loc, r, rgb, scale=(1, 1, 1), emit=0.0, rough=0.5):
-    bpy.ops.mesh.primitive_uv_sphere_add(location=loc, radius=r, segments=24, ring_count=12)
-    o = bpy.context.object; o.scale = scale; o.parent = sc.body
-    m, b = S._material("m", S.lin(rgb), rough=rough)
-    if emit: b.inputs["Emission Color"].default_value = S.lin(rgb); b.inputs["Emission Strength"].default_value = emit
-    o.data.materials.append(m); bpy.ops.object.shade_smooth()
-for side in (-1, 1):
-    blob((0.098, side * 0.042, 0.592), 0.021, (24, 20, 22), rough=0.15)            # eyes
-    blob((0.115, side * 0.036, 0.6), 0.006, (255, 255, 255), emit=2.0)             # eye highlights
-    blob((0.085, side * 0.072, 0.538), 0.026, (240, 120, 120), (0.6, 1, 0.8))      # cheeks
-    blob((0.112, side * 0.03, 0.528), 0.03, (110, 72, 44), (0.55, 1.35, 0.55), rough=0.9)   # moustache
+# (his face: eyes, cheeks and moustache are part of the model in scene.py now)
 
 # soft light from the front so his face isn't in shadow
 key = bpy.data.lights.new("Key", "AREA"); key.energy = 60; key.size = 2.5; key.color = (1.0, 0.96, 0.9)

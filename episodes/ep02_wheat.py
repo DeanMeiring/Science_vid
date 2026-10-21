@@ -41,7 +41,8 @@ SCRIPT = [
     ("Two crops gave me a highway. Three crops... just a mess.",
      "Two crops gave me a highway. Three crops... just a mess.", "linear", 1110000),
     ("Do y'all think I'll ever get out of this mess? Tell me in the comments!", None, "linear", 1160000),
-    ("Next experiment: four crops. See y'all next harvest!", None, "linear", 1200000),
+    ("Next experiment: one of my sheep wanders off. Will she ever find her way home? See y'all next harvest!",
+     None, "linear", 1200000),
 ]
 
 # rule cards shown while the rules are explained (lines 2-5)
@@ -62,7 +63,7 @@ On grass Joe turns right, on dirt he turns left, on wheat he turns right again, 
 
 With two crops he built a highway at step 9,977. With three (the rule "RLR") he's still lost in the mess after a million steps, and nobody knows if this one EVER builds a highway. It's an open question.
 
-Do you think he'll ever get out? Next experiment: four crops.
+Do you think he'll ever get out? Next experiment: one of Joe's sheep wanders off. Will she ever find her way home?
 
 Narration voice: Kokoro TTS (Apache-2.0).
 #maths #science #langtonsant #emergence #farmerjoe"""

@@ -140,6 +140,18 @@
   and the conclusion zooms out over one farm with Episode 1's field rising
   beyond today's, each labelled. Dean liked the trip gag and the bald head
   under the hat.
+- **Series plan (Dean, Oct 2026):** Joe runs a *different* experiment each
+  episode on his farm (not 8 ant episodes). Order: Experiment 3 lost sheep
+  (random walk), then four crops / crop circle (LLRR, check symmetry first),
+  Monty Hall barns, golden-angle sunflowers. Episode 2's last line teases
+  the sheep.
+- **Experiment 3 facts (checked):** Pólya (1921): a random walk on a flat
+  grid returns home with probability 1; in 3D only about 34% (Wikipedia,
+  "Random walk", citing MathWorld). Kakutani: "A drunk man will find his
+  way home, but a drunk bird may get lost forever" (via Durrett,
+  *Probability: Theory and Examples*). Our sim, 2,000 walkers × 200,000
+  steps: 2D 80% home and still rising; 3D 36% and flat. Not checked yet:
+  anything about *how long* it takes on average (don't claim it).
 - **From Experiment 3, Dean wants to try a more amateur, personal feel.**
   The polished look is "very good", but he wants it less slick. Try a few
   different setups and show samples before committing.

@@ -19,6 +19,27 @@
   Railway). It's a library of methods to reuse here. Copy what's needed;
   don't import across repos.
 
+## Where we left off (end of 21 Oct 2026)
+- **Posted:** Experiment 1 on YouTube + Instagram; Experiment 2 on YouTube
+  only. Instagram failed because it's over ~50 s (see the note below).
+  Dean may post it from his phone (`renders/ep02_wheat/ep02_wheat.mp4`).
+- **GitHub:** PR #3 (`claude/voice-cartoon` → `main`, all the pipeline
+  work) is open and waits for Dean to merge it (Claude Code blocks Claude
+  from merging). `claude/episode-2` is stacked on top of it; its PR is #4.
+- **Next: Experiment 3, the lost sheep** (facts checked, below). Dean said
+  "not yet": start when he asks. Plan:
+  1. script under ~50 s that opens on action;
+  2. voice it in george, as whole flowing paragraphs, and let Dean hear the
+     voice-over on its own first;
+  3. then style samples for the "more amateur, personal" look;
+  4. then animate to follow the voice (Whisper word timings), and render.
+- **Ideas queue:** four crops / crop circle (LLRR), Monty Hall barns,
+  golden-angle sunflowers. A viewer comment on Experiment 1's Reel: "two
+  farmers … after ~12,000 steps both end up where they started and all the
+  dirt is grass". Check by simulation; a possible episode crediting them.
+- Instagram insights (views, reach) need the `instagram_manage_insights`
+  permission; not requested yet.
+
 ## Format Dean asked for
 - **The narrator explains while it runs:** zoomed in on the grid while
   the rules are explained ("put an ant on a grid of white squares… on white

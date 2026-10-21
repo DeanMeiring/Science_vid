@@ -117,8 +117,8 @@
     automatically.
 - First episode: farm theme. The farmer is **Farmer Joe** (Dean's name,
   Oct 2026); he may become the mascot of the whole channel, with every
-  experiment given a farm twist. Not decided yet, and neither is the account
-  name. His trail is fresh grass that flashes yellow-green (picked as a
+  experiment given a farm twist (not decided yet; the Instagram account is
+  already named after him). His trail is fresh grass that flashes yellow-green (picked as a
   default, not by Dean yet).
 - Accounts connected in the studio (Oct 2026):
   - Instagram: **@farmerjoe1111**, a Creator account linked to the Farmer

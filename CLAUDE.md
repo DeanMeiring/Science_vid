@@ -123,8 +123,9 @@
 - Accounts connected in the studio (Oct 2026):
   - Instagram: **@farmerjoe1111**, a Creator account linked to the Farmer
     Joe Facebook Page. `INSTAGRAM_USERNAME` in `.env` pins it.
-  - YouTube: **Caught On Code**. Check with Dean that this is the right
-    channel for Farmer Joe before the first post.
+  - YouTube: the **Farmer Joe** channel (`@farmer-joe-1111`, id
+    UCW4elsuFZaMRHhMRq6hKGZA). It showed as "Caught On Code" at first: that
+    was the same channel under its old name.
 
 ## Voice
 - **Chosen voice (Oct 2026): Kyutai Pocket TTS preset `george`.** Dean's

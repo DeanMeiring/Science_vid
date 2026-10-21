@@ -191,6 +191,13 @@ def post_youtube(name: str, body: Post):
     if not token: raise HTTPException(400, "Connect YouTube first.")
     save(name, Draft(title=body.title, description=body.description))
     def work(log):
+        try:   # the channel may have been renamed since connecting (1 quota unit)
+            ch = youtube.own_channel(token)
+            if ch:
+                data = yt_store.load(); data["channel"] = ch; yt_store.path.write_text(json.dumps(data))
+                log("channel:", ch["title"])
+        except Exception:
+            pass
         log("uploading", v.name)
         vid = youtube.upload_video(token, v, body.title, body.description, body.privacy,
                                    body.synthetic, body.publish_at or None)

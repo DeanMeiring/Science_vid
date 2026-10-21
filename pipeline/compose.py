@@ -8,7 +8,7 @@ Writes renders/<episode>/<episode>[_draft].mp4 (and a thumbnail .jpg).
 
 Overlays and sound design come from prototypes/ant_3d.py.
 """
-import argparse, subprocess, sys, wave
+import argparse, json, subprocess, sys, wave
 from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -118,6 +118,17 @@ def counter_fn(step, speed):
         if speed: ctext(dr, 305, speed, F_SPD, (255, 200, 90), 3)
     return fn
 
+# ---------------- floating labels above each field in the comparison ----------------
+F_LTITLE = font("Anton.ttf", 64)
+def field_label_fn(x, y, title, sub_, alpha):
+    def fn(dr):
+        a = int(255 * alpha)
+        for txt, f_, col, dy, st in ((sub_, F_LAB, (255, 255, 255, a), -52, 4), (title, F_LTITLE, (255, 214, 64, a), -130, 6)):
+            w_ = dr.textlength(txt, font=f_)
+            xx = min(max(20, x - w_ / 2), W - 20 - w_)
+            dr.text((xx, y + dy), txt, font=f_, fill=col, stroke_width=st, stroke_fill=(0, 0, 0))
+    return fn
+
 def title_fn(alpha):
     def fn(dr):
         a = int(255 * alpha)
@@ -132,6 +143,11 @@ ff = subprocess.Popen([ffmpeg(), "-y", "-loglevel", "error", "-f", "rawvideo", "
 r0, r1 = ep.RULE_LINES
 hl = lines[ep.HIGHWAY_LINE] if getattr(ep, "HIGHWAY", None) else None    # the highway moment, if there is one
 TRIP = getattr(ep, "TRIP_LINE", None); trl = lines[TRIP] if TRIP is not None else None
+CMP = getattr(ep, "COMPARE_LINE", None); cml = lines[CMP] if CMP is not None else None
+LABELS = {}
+if cml:
+    lp_ = frames_dir / "labels.json"
+    LABELS = {int(k): v for k, v in json.loads(lp_.read_text()).items()} if lp_.exists() else {}
 src_i = 0; base = None; base_f = -1
 thumb = None
 for f in range(F0, F1):
@@ -146,7 +162,16 @@ for f in range(F0, F1):
     rate = (sched[min(f + 2, NF - 1)] - sched[max(f - 2, 0)]) / 4 * FPS
     if hl and ep.HIGHWAY <= done and abs(tt - hl["t1"]) < 0.25:          # flash as the highway starts
         img += (1 - abs(tt - hl["t1"]) / 0.25) * 60
-    if tt < lines[1]["t0"] + 0.3:
+    in_cmp = cml and tt >= cml["t0"] - 0.3
+    if in_cmp:
+        # no counter now: labels float above the two fields (positions from the Blender render)
+        kf = max([k for k in LABELS if k <= f] or [None]) if LABELS else None
+        if kf is not None:
+            al = round(min(1.0, max(0.0, (tt - cml["t0"] - 0.6) / 0.5)), 2)
+            for (lx, ly), lab in zip(LABELS[kf], (ep.COMPARE_WITH, ep.COMPARE_LABEL)):
+                comp(img, layer(("lab", lab["title"], int(lx), int(ly), al),
+                                field_label_fn(lx, ly, lab["title"], lab["sub"], al)))
+    elif tt < lines[1]["t0"] + 0.3:
         al = round(min(1, (lines[1]["t0"] + 0.3 - tt) / 0.3), 2)
         comp(img, layer(("title", al), title_fn(al)))
     elif lines[r0]["t0"] <= tt < lines[r1]["t1"]:

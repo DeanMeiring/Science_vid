@@ -13,7 +13,7 @@ Frames go to renders/<episode>/frames[_draft]/f_00000.jpg. Frames already on dis
 skipped, so a stopped render picks up where it left off. Runs at low priority on 4
 threads by default, to keep the laptop usable.
 """
-import argparse, math, sys, time
+import argparse, json, math, sys, time
 from pathlib import Path
 import numpy as np
 
@@ -98,6 +98,32 @@ def trip_pose(tl):
         return fall, hat_at(c, np.array(GROUND_HAT[1]) * (1 - u))
     return fall, None
 
+# ---------------- the comparison (COMPARE_LINE): an earlier episode's field on the same farm ----------------
+CMP = getattr(ep, "COMPARE_LINE", None)
+if CMP is not None:
+    cw = ep.COMPARE_WITH
+    o_moves, _ = simulate(cw["steps"], cw["rule"])
+    og = np.zeros((N, N), np.uint8)
+    for px_, py_ in o_moves: og[py_, px_] = (og[py_, px_] + 1) % len(cw["rule"])
+    oys, oxs = np.nonzero(og > 0); okind = og[oys, oxs]
+    # today's whole field (at its last step), and the old one just beyond it (higher up the screen)
+    fx0, fx1, fy0, fy1 = int(mx[-1]), int(Mx[-1]), int(my[-1]), int(My[-1])
+    GAP = 45                       # room between the fields for the nearer one's label
+    ox = (fx0 + fx1) / 2 - (oxs.min() + oxs.max()) / 2
+    oy = fy0 - GAP - oys.max() - 1
+    oxs = (oxs + round(ox)).astype(np.int64); oys = (oys + round(oy)).astype(np.int64)
+    ostag = (np.sin(oxs * 12.9898 + oys * 78.233) * 43758.5453) % 1.0      # blocks rise one after another
+    cmp_t0 = lines[CMP]["t0"]
+    labels_path = out / "labels.json"
+    LABELS = json.loads(labels_path.read_text()) if labels_path.exists() else {}
+
+def to_screen(gx, gy):
+    """Grid point -> pixel (x, y) on the full-size frame."""
+    from bpy_extras.object_utils import world_to_camera_view
+    from mathutils import Vector
+    v = world_to_camera_view(sc.sc, sc.cam, Vector((gx, -gy, 0.0)))
+    return [round(v.x * S.W, 1), round((1 - v.y) * S.H, 1)]
+
 grid = np.zeros((N, N), np.uint8)
 prev = np.zeros((N, N), np.uint8)                # colour before the last change (blocks morph from it)
 last = np.full((N, N), -10 ** 9, np.int64)       # step of each cell's last flip
@@ -136,6 +162,13 @@ for f in range(end):
         hd = ANGS[adir]
         tx_, ty_ = pos[0] + 0.5 + 0.45 * math.cos(hd), pos[1] + 0.5 - 0.45 * math.sin(hd)
         s_t, k = 340.0, 0.14
+    if CMP is not None and tt >= cmp_t0 - 0.3:
+        # zoom out to both fields, with room above each for its label
+        ux0, ux1 = min(bx0, oxs.min()), max(bx1, oxs.max()); uy0, uy1 = min(by0, oys.min()), max(by1, oys.max())
+        tx_, ty_ = (ux0 + ux1 + 1) / 2, (uy0 + uy1 + 1) / 2 - 0.06 * (uy1 - uy0)
+        # fit the width, and the height into the band between the labels and the captions
+        # (the tilted camera squashes depth to about 0.85 on screen)
+        s_t, k = min(140.0, BOX / (ux1 - ux0 + 14), 1150 / ((uy1 - uy0 + 14) * 0.85)), 0.07
     s_cur *= (s_t / s_cur) ** k
     cx += (tx_ - cx) * k; cy += (ty_ - cy) * k
     if f < args.start or f % args.every: continue
@@ -152,7 +185,15 @@ for f in range(end):
     kind = np.where(cur > 0, cur, np.where(a < 1, old, 0))
     heat = np.exp(-(done - last[sub]) / heat_len) * 0.8
     ys, xs = np.nonzero((hz > 0.004) | (heat > 0.05) | (cur > 0))
-    sc.set_cells(xs + bx0, ys + by0, hz[ys, xs], heat[ys, xs], kind[ys, xs])
+    xs, ys, hz, heat, kind = xs + bx0, ys + by0, hz[ys, xs], heat[ys, xs], kind[ys, xs]
+    if CMP is not None and tt >= cmp_t0:
+        # the earlier field rises out of the grass, block by block
+        r = np.clip((tt - cmp_t0 - 0.9 * ostag) / 0.5, 0, 1); r = r * r * (3 - 2 * r)
+        on = r > 0
+        xs = np.concatenate([xs, oxs[on]]); ys = np.concatenate([ys, oys[on]])
+        hz = np.concatenate([hz, HGT[okind[on]] * r[on]]); heat = np.concatenate([heat, np.zeros(on.sum())])
+        kind = np.concatenate([kind, okind[on]])
+    sc.set_cells(xs, ys, hz, heat, kind)
     sc.set_tufts(grid, cx, cy, s_cur, hz=HGT[grid])
     sc.set_floor(s_cur)
     az = HGT[grid[ay, ax]] if (f - flip_f[ay, ax]) > ANIM else HGT[prev[ay, ax]]
@@ -167,10 +208,17 @@ for f in range(end):
         front = math.degrees(math.atan2(-math.cos(ang), -math.sin(ang))) + 55
         yaw += ((front - yaw + 180) % 360 - 180) * w
     sc.set_camera(cx, cy, s_cur, yaw)
+    if CMP is not None and tt >= cmp_t0 - 0.5:
+        # where the labels go: just above each field (pixels on the full-size frame)
+        import bpy; bpy.context.view_layer.update()
+        LABELS[str(f)] = [to_screen((oxs.min() + oxs.max() + 1) / 2, oys.min() - 3),
+                          to_screen((fx0 + fx1 + 1) / 2, fy0 - 3)]
+        if rendered % 10 == 0: labels_path.write_text(json.dumps(LABELS))
     sc.render(path)
     rendered += 1
     if rendered % 20 == 0:
         el = time.time() - t_start
         left = len(range(f + 1, end, args.every)) * el / rendered
         print(f"frame {f}/{NF} step {done}  {el / rendered:.1f}s/frame  ~{left / 60:.0f} min left", flush=True)
+if CMP is not None: labels_path.write_text(json.dumps(LABELS))
 print(f"done: {rendered} frames in {(time.time() - t_start) / 60:.1f} min -> {out}", flush=True)

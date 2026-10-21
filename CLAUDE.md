@@ -101,11 +101,21 @@
   (Dean OK'd it) to copy code from.
 
 ## Voice
-- Narration is a cloned voice, most likely **Dean's friend's** (he's keen).
-  Dean will upload a video or audio file of him talking.
-- Only with the friend's OK. Record his consent with the sample, like
-  CLIPPER's `/voices` page (`consent` in `voice.json`). Samples live in
-  `voices/` (gitignored, never committed).
+- **Chosen voice (Oct 2026): Kyutai Pocket TTS preset `george`.** Dean's
+  friend wasn't available, and Dean has no good mic, so he picked from 8
+  free voices (`voice/samples.py`, Kokoro + Pocket presets).
+  - `george` is VCTK speaker p315, licensed CC-BY-4.0: commercial use is
+    OK, but credit it in every video description, e.g. "Narration voice:
+    Kyutai Pocket TTS, voice from the VCTK corpus (CC-BY-4.0)".
+  - Use `model.get_state_for_audio_prompt("george")`. On Windows, run
+    Python in UTF-8 mode (`-X utf8`), or pocket_tts crashes reading its
+    config.
+  - `HF_TOKEN` is in `.env` (gitignored). Packages are in `.venv`.
+  - Avoid the Pocket presets from the `expresso/` and `ears/` folders: they
+    are non-commercial.
+- If a friend's cloned voice is used later: only with his OK. Record his
+  consent with the sample, like CLIPPER's `/voices` page (`consent` in
+  `voice.json`). Samples live in `voices/` (gitignored, never committed).
 - Reuse CLIPPER's `clipper/voice_clone.py`:
   - Kyutai Pocket TTS, CPU, ~0.6 GB RAM, CC-BY-4.0.
   - Needs `HF_TOKEN` from an account that accepted the terms at
@@ -116,7 +126,8 @@
     there.
 - On YouTube, a cloned voice of someone else needs the altered/synthetic
   content label (`status.containsSyntheticMedia`, as CLIPPER sets it for
-  friends' voices).
+  friends' voices). For the stock `george` voice, check YouTube's current
+  rule before the first upload.
 
 ## Pieces in CLIPPER worth copying (paths in that repo)
 - `clipper/voice_clone.py`: voice cloning and number spelling.

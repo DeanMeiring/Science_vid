@@ -14,7 +14,7 @@ Each line's real length sets how long the simulation spends on it. Caption words
 spread over the spoken part of the line by word length (a Whisper alignment can
 replace this later, as in CLIPPER's longform_beats).
 """
-import json, os, subprocess, sys, wave
+import hashlib, json, os, subprocess, sys, wave
 from pathlib import Path
 import numpy as np
 
@@ -64,8 +64,16 @@ def main():
     sr = voice.sample_rate
     lines, clips, t = [], [], LEAD
     for i, (caption, say, mode, target) in enumerate(ep.SCRIPT):
-        wav = out / "voice" / f"{i:02d}.wav"
         pieces = say if isinstance(say, (list, tuple)) else [(say or caption, 0.0)]
+        # named by what's said, so adding or removing a line never reuses the wrong recording
+        key = hashlib.sha1(repr((spec, pieces)).encode()).hexdigest()[:10]
+        wav = out / "voice" / f"{i:02d}_{key}.wav"
+        legacy = out / "voice" / f"{i:02d}.wav"     # older runs named lines by number only
+        if not wav.exists() and legacy.exists() and i < len(old.get("lines", [])) \
+                and old["lines"][i]["text"] == caption and not isinstance(say, (list, tuple)):
+            legacy.rename(wav)
+        for stale in (out / "voice").glob(f"{i:02d}_*.wav"):
+            if stale != wav: stale.unlink()
         if not wav.exists():   # re-runs only redo missing lines (delete a file to redo it)
             parts = []
             for text, pause in pieces:
@@ -100,6 +108,9 @@ def main():
         t += dur + GAP
     dur = t + 1.6
     lines[-1]["t1"] = dur
+    for f in (out / "voice").glob("*.wav"):        # recordings no line uses any more
+        if not any(f.name.startswith(f"{i:02d}_") for i in range(len(ep.SCRIPT))) or "_" not in f.stem:
+            f.unlink()
     # the whole voice track at 48 kHz
     track = np.zeros(int(dur * SR_OUT) + SR_OUT, np.float32)
     for t0, a in clips:

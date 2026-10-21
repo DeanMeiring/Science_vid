@@ -14,7 +14,7 @@ Facts checked (Oct 2026):
   chaotically. It is not known whether this ant ever produces a highway." (extension by
   Turk and Propp; Gale, Propp, Sutherland, Troubetzkoy, "Further Travels with My Ant",
   Mathematical Intelligencer 1995).
-- Episode 1 (2 crops, RL) built a highway, at step 9,977.
+- Episode 1 (2 crops, RL) built a highway, at step 9,977 (now only in the description).
 """
 
 EXPERIMENT = 2
@@ -23,11 +23,10 @@ RULE = "RLR"                     # turn on grass, dirt, wheat
 CROPS = ["GRASS", "DIRT", "WHEAT"]
 
 SCRIPT = [
-    ("Howdy! It's me, Farmer Joe. Look at my little hat.", None, "hold", 0),
-    ("Last time, two crops gave me a highway.", None, "hold", 0),
-    ("Today, I'm planting a third crop: wheat.", None, "hold", 0),
-    ("On grass, I turn right.", None, "single", 4),
-    ("On dirt, I turn left.", None, "single", 8),
+    ("Howdy! Farmer Joe here. Look at my little hat.", None, "hold", 0),
+    ("Today I'm planting a third crop: wheat!", None, "single", 3),     # he starts farming straight away
+    ("On grass, I turn right.", None, "single", 6),
+    ("On dirt, I turn left.", None, "single", 9),
     ("And on wheat, I turn right again.", None, "single", 12),
     ("Every square I leave grows to the next crop. Grass, dirt, wheat, then back to grass.",
      None, "single", 21),
@@ -42,11 +41,11 @@ SCRIPT = [
     ("Next experiment: four crops. See y'all next harvest!", None, "linear", 1200000),
 ]
 
-# rule cards shown while the rules are explained (lines 3-6)
+# rule cards shown while the rules are explained (lines 2-5)
 RULES = [("GRASS", "TURN RIGHT"), ("DIRT", "TURN LEFT"), ("WHEAT", "TURN RIGHT")]
-RULE_LINES = (3, 6)
+RULE_LINES = (2, 5)
 HIGHWAY = None                    # no highway this time (as far as anyone knows)
-TRIP_LINE = 9
+TRIP_LINE = 8
 
 TITLE = "Farmer Joe plants a third crop. A million steps later..."
 DESCRIPTION = """Experiment #2: Langton's Ant with 3 colours, as Farmer Joe's farm.

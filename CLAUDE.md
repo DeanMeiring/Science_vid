@@ -160,6 +160,11 @@
   *Probability: Theory and Examples*). Our sim, 2,000 walkers × 200,000
   steps: 2D 80% home and still rising; 3D 36% and flat. Not checked yet:
   anything about *how long* it takes on average (don't claim it).
+- **Pacing (Dean, after Episode 2):** it "takes too long to start and speed
+  up" and "the voice over did not flow". From Experiment 3: open on action in
+  the first 1-2 s, rules in 1-2 quick lines, speeding up by ~6-8 s; voice
+  whole paragraphs in one go (no per-line gaps or MIN_DUR padding) and
+  drive sim cues and captions from Whisper word timings; aim for < 50 s.
 - **From Experiment 3, Dean wants to try a more amateur, personal feel.**
   The polished look is "very good", but he wants it less slick. Try a few
   different setups and show samples before committing.

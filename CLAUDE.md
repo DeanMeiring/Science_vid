@@ -1,0 +1,142 @@
+# Working with Dean on Science_vid
+
+## Pull requests
+- Every code change goes on its own branch with a pull request. Dean merges
+  it himself on GitHub.
+- Never merge a PR yourself, and never push straight to `main`.
+- Cut each branch from `origin/main` (`git checkout -b claude/<topic>
+  origin/main`).
+
+## What this is
+- A new YouTube channel: animated maths and science experiments, Shorts
+  first (long-form later).
+- **Quality over quantity:** Dean wants each Short tailored and neat at the
+  start, not mass-produced. Automation and scheduling come later, and
+  Dean will decide when.
+- It started from videos Dean saw of Langton's Ant: chaos, then a highway
+  around step 10,000.
+- Sister project: `DeanMeiring/CLIPPER` (his Twitch-clip Shorts app on
+  Railway). It's a library of methods to reuse here. Copy what's needed;
+  don't import across repos.
+
+## Format Dean asked for
+- **The narrator explains while it runs:** zoomed in on the grid while
+  the rules are explained ("put an ant on a grid of white squares… on white
+  it turns right, on black it turns left… then it flips the colour and steps
+  forward"), then the camera zooms out as it speeds up, while the narration
+  explains the rest.
+- **Satisfying visuals.**
+- **"Experiment #N" series that evolves:** each episode changes one thing
+  from the last and ends on the next question ("Next experiment: what
+  happens with three colours?"). See `docs/ideas.md`.
+- **3D:** Dean asked for "a bit more 3D", and he liked the result a lot
+  (`prototypes/ant_3d.py`, frames in `docs/img/ant_3d_frames.jpg`):
+  - tilted camera (pitch 54°) with a slow orbit (yaw -18° → +18°)
+  - black squares are raised blocks (height 0.42) that rise and sink over
+    7 frames when flipped
+  - soft shadows
+  - recently flipped squares glow pink, and that trail shortens with speed
+  - a small 3D ant that walks smoothly between squares while slow
+  - "STEP n" and "SPEED ×n" counters; slow motion into step 9,977, then a
+    flash and boom
+  - word-by-word captions (current word yellow), rule cards that light up
+    for the rule in use
+- The 2D version (`prototypes/ant_2d.py`) was the step before. It has the
+  same structure.
+
+## How the prototype works (keep this design)
+- **Narration-driven:** `SCRIPT` is a list of (caption, mode, target step).
+  Each line's mode decides what the sim does while it's spoken: `hold`,
+  `single` (one step at a time), `ramp` (exponential), `linear`, `land`
+  (brake into a moment), `easein`.
+- **Timing:** for now word timing is estimated from word length at ~2.7
+  words/s. With a real voice, use Whisper word timings instead, the way
+  CLIPPER's `longform_beats.script_timings` does.
+- **Camera:** it fits the bounding box of every square touched so far,
+  smoothed, so it starts zoomed in and pulls back by itself.
+- **Sound:** generated in numpy: a tick per step while slow, a hum whose
+  pitch rises with speed, a riser into the highway moment and a boom.
+- **Render:** Pillow at 2x then downscaled (no anti-aliased polygon lib), RGB
+  frames piped into ffmpeg. The 3D render took ~7 min for 47 s on 4 cloud
+  cores.
+- **Lesson:** text layers are cached, cropped to their box. Clear the cache
+  *before* inserting, not after: clearing after inserting crashed once on
+  the lookup.
+- **Lesson:** Pillow's `GaussianBlur` needs a plain float, not a numpy
+  float.
+
+## Facts checked by simulation (Langton's Ant, RL)
+- The highway starts at step **9,977** and repeats every **104 steps**,
+  moving 2 cells diagonally per period.
+- The claim "nobody has proven it always builds a highway" refers to the
+  open question for every finite starting pattern. What *is* proven is that
+  the path is always unbounded (Cohen–Kong).
+- Dean described the rule as "left on white, right on black". That's the
+  mirror image: same behaviour, the highway goes the other way.
+- Script rule: every claim in a script must be checked by running the sim
+  (or a solid source) before it goes in. No made-up facts.
+
+## Laptop: VS Code + Blender (next step)
+- Dean is moving this work to Claude Code in VS Code on his laptop so we can
+  use Blender and render locally.
+- **The laptop has no separate graphics card, but a very good CPU.** Plan:
+  - Blender headless (`blender -b -P script.py`), driven by Python.
+  - EEVEE on the built-in graphics if it works (estimate ~20-60 min per
+    47 s Short), or Cycles on the CPU with low samples + OpenImageDenoise
+    (estimate ~2-6 h, overnight).
+  - Instance one block mesh for all cells (geometry nodes / instancing),
+    simple materials, one soft light.
+  - Low-res drafts while tweaking.
+  - **First job:** build the Experiment #1 scene in Blender and benchmark
+    one frame in EEVEE vs Cycles on his laptop. Then Dean compares it with
+    the Pillow 3D look and picks one. These numbers are guesses until that
+    test.
+- Keep the Pillow renderer working as the fallback (and for automation
+  later on Railway, where there's no GPU).
+- The OS isn't confirmed yet (Windows or Mac?). Ask him.
+
+## Voice
+- Narration is a cloned voice, most likely **Dean's friend's** (he's keen).
+  Dean will upload a video or audio file of him talking.
+- Only with the friend's OK. Record his consent with the sample, like
+  CLIPPER's `/voices` page (`consent` in `voice.json`). Samples live in
+  `voices/` (gitignored, never committed).
+- Reuse CLIPPER's `clipper/voice_clone.py`:
+  - Kyutai Pocket TTS, CPU, ~0.6 GB RAM, CC-BY-4.0.
+  - Needs `HF_TOKEN` from an account that accepted the terms at
+    huggingface.co/kyutai/pocket-tts.
+  - `spoken_text` spells numbers out ("9,977" → "nine thousand nine
+    hundred seventy-seven"). Captions keep digits.
+  - The misread check (Whisper transcript vs script) also comes from
+    there.
+- On YouTube, a cloned voice of someone else needs the altered/synthetic
+  content label (`status.containsSyntheticMedia`, as CLIPPER sets it for
+  friends' voices).
+
+## Pieces in CLIPPER worth copying (paths in that repo)
+- `clipper/voice_clone.py`: voice cloning and number spelling.
+- `clipper/longform_beats.py`: aligning Whisper word timings to a script.
+- `clipper/captions.py`: ASS captions, if we switch from drawn captions.
+- `clipper/youtube_upload.py`: upload, `publish_at` scheduling,
+  thumbnails, the synthetic-media flag.
+- `clipper/ball_evolution.py` / `ball_sounds.py`: numpy sound design,
+  recipe variety, `pick_seed` (simulating without drawing to pick good
+  runs).
+- `webapp/main.py` Ball Evolution autopilot: for later, if Dean wants
+  automatic posting (Railway cron waker, `EXTRA_YOUTUBE_ACCOUNTS`).
+
+## YouTube risks (Dean was told)
+- YouTube's July 2025 "inauthentic / repetitive content" rules and the
+  1 Oct 2026 Shorts change punish template-looking, mass-produced videos.
+- What keeps this safe:
+  - each video is a genuinely different experiment
+  - real explanation in the narration
+  - true, checked facts
+  - Dean reviews each one
+- Everything visual is our own maths render, and the fonts are OFL, so
+  there's no copyright risk there.
+
+## Other preferences (same as CLIPPER)
+- No paid signups or subscriptions. Check for free options first.
+- For big visual changes, show a mockup or sample render first.
+- Don't say a claim is proven without checking it.

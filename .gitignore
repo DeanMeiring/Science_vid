@@ -1,0 +1,20 @@
+# renders and audio are big; keep them out of git
+*.mp4
+*.wav
+*.mov
+preview_*.png
+renders/
+out/
+_v.mp4
+_a.wav
+# private: voice samples and cloned voices (only with the person's OK, never in git)
+voices/
+# secrets
+.env
+*_token*.json
+# python
+__pycache__/
+.venv/
+venv/
+# blender
+*.blend1

@@ -55,6 +55,16 @@
   golden-angle sunflowers. A viewer comment on Experiment 1's Reel: "two
   farmers … after ~12,000 steps both end up where they started and all the
   dirt is grass". Check by simulation; a possible episode crediting them.
+- **Experiment 4: two farmers** (the viewer's idea; Dean said "go for it", 22 Oct). Branch
+  `claude/episode-4-farmers` (stacked on `claude/episode-3`). `pipeline/farmers.py` is the sim;
+  `episodes/ep04_farmers.py` the script, voiced in george (40.7 s, `renders/ep04_farmers/
+  narration_flow.wav`), waiting for Dean to listen. Checked: in the record setup the mess peaks
+  at 164 squares, at round 1,181 the farmers meet and each walks back along the other's path,
+  the field is spotless at 2,362 (wrong spots), it repeats upside down, and at 4,724 rounds
+  (9,448 moves) both are exactly home, forever. Survey: 536 of 1,280 setups come back; 4,724 is
+  the longest *found* (don't call it the longest possible). Experiment 3 teased "four crops"
+  next; this episode's last line keeps that promise for Experiment 5. Credit the commenter
+  (handle needed from Dean) in the description.
 - Instagram insights (views, reach) need the `instagram_manage_insights`
   permission; not requested yet.
 

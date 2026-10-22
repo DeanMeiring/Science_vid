@@ -78,11 +78,12 @@
   Lesson: Claude Code stops background jobs when the laptop runs low on memory; frames on disk
   are kept, so a render resumes where it stopped.
 - **Experiment 4 posted to YouTube 22 Oct 2026, 16:02** (https://youtube.com/shorts/DhlirSjSuRo).
-  Instagram failed: "ProcessingFailedError" at the upload step. Tested without posting
-  (`publish=False`): a 24.6 MB re-encode failed the same way, and so did Experiment 3's video,
-  which had posted fine that morning. So it isn't this video (not length, not size); Instagram's
-  upload refused everything that afternoon. That also casts doubt on the "~50 s limit" above
-  (one failure may have been this, not length). Next time: retry later, or post from the phone.
+  Instagram: posted 16:44 (https://www.instagram.com/reel/DezOaEAAG8r/) after it first failed
+  with "ProcessingFailedError" at the upload step, for every video (even Experiment 3's, which
+  had posted that morning), while the login still worked for reads (posting quota 2/100).
+  **Fix: Dean disconnected and reconnected Instagram in the studio.** So that error can mean a
+  stale login, not the video; reconnect first. This also casts doubt on the "~50 s limit"
+  above (Experiment 2's failure may have been the same thing).
 - Instagram insights (views, reach) need the `instagram_manage_insights`
   permission; not requested yet.
 

@@ -36,7 +36,8 @@ THEMES = {
                  block=(120, 80, 48), block_fresh=(84, 52, 30), block_h=0.14, emit=0.0,
                  world=(178, 210, 240), sun=2.6, sun_col=(255, 244, 222), dot=(255, 214, 64),
                  # colour 1, 2, ...: (colour, fresh colour, height); colour 0 is the grass floor
-                 crops=[((120, 80, 48), (84, 52, 30), 0.14), ((222, 178, 70), (255, 222, 120), 0.26)]),
+                 crops=[((120, 80, 48), (84, 52, 30), 0.14), ((222, 178, 70), (255, 222, 120), 0.26),
+                        ((66, 116, 44), (110, 170, 70), 0.14)]),        # pumpkins (Experiment 5): leaves under them
 }
 
 def gentle():
@@ -209,7 +210,7 @@ class Scene:
         col = _mix(nt, is1.outputs[0], flo_col, blk_col)
         for i, (c, fresh, _h) in enumerate(T["crops"][1:], start=2):
             ci = _mix(nt, a_heat.outputs["Fac"], lin(c), lin(fresh))
-            if farm:   # wheat: fine golden streaks
+            if farm and i == 2:   # wheat: fine golden streaks
                 tcw = _node(nt, "ShaderNodeTexCoord")
                 ww = _node(nt, "ShaderNodeTexWave", wave_type="BANDS", bands_direction="Y")
                 ww.inputs["Scale"].default_value = 9; ww.inputs["Distortion"].default_value = 3
@@ -275,6 +276,28 @@ class Scene:
         self.stalks = bpy.data.objects.new("Stalks", _points_mesh("Stalks", [], {}))
         self.sc.collection.objects.link(self.stalks)
         self.stalks.modifiers.new("Inst", "NODES").node_group = _instancer_nodes("Stalks", stalk)
+        # pumpkins: a ribbed, squashed orange ball with a little green stem
+        bm = bmesh.new()
+        bmesh.ops.create_uvsphere(bm, u_segments=24, v_segments=12, radius=0.26)
+        for v in bm.verts:
+            a = math.atan2(v.co.y, v.co.x); k = 1 - 0.07 * (0.5 + 0.5 * math.cos(8 * a))
+            v.co.x *= k; v.co.y *= k; v.co.z = v.co.z * 0.72 + 0.19
+        n_body = len(bm.faces)
+        bmesh.ops.create_cone(bm, cap_ends=True, segments=6, radius1=0.035, radius2=0.025, depth=0.1,
+                              matrix=Matrix.Translation((0.01, 0, 0.41)) @ Matrix.Rotation(0.25, 4, "Y"))
+        pme = bpy.data.meshes.new("Pumpkin"); bm.to_mesh(pme); bm.free()
+        pm_, pb_ = _material("Pumpkin", lin((236, 120, 30)), rough=0.45)
+        oinf3 = _node(pm_.node_tree, "ShaderNodeObjectInfo")
+        pm_.node_tree.links.new(_mix(pm_.node_tree, oinf3.outputs["Random"], lin((222, 104, 24)), lin((250, 146, 44))),
+                                pb_.inputs["Base Color"])
+        pme.materials.append(pm_); pme.materials.append(_material("PumpkinStem", lin((76, 110, 40)), rough=0.8)[0])
+        for i, f_ in enumerate(pme.polygons): f_.material_index = 0 if i < n_body else 1
+        for f_ in pme.polygons: f_.use_smooth = True
+        pumpkin = bpy.data.objects.new("Pumpkin", pme); self.sc.collection.objects.link(pumpkin)
+        pumpkin.hide_render = True; pumpkin.hide_viewport = True
+        self.pumpkins = bpy.data.objects.new("Pumpkins", _points_mesh("Pumpkins", [], {}))
+        self.sc.collection.objects.link(self.pumpkins)
+        self.pumpkins.modifiers.new("Inst", "NODES").node_group = _instancer_nodes("Pumpkins", pumpkin)
 
     def _walker(self):
         self.root = bpy.data.objects.new("Walker", None); self.sc.collection.objects.link(self.root)
@@ -542,13 +565,14 @@ class Scene:
         if self.theme != "farm": return
         show = s_px > 30
         self.tufts.hide_render = self.stalks.hide_render = not show
+        self.pumpkins.hide_render = s_px <= 12
         if not show: return
         R = int(1.3 * max(W, H) / s_px) + 2
         gx, gy = np.meshgrid(np.arange(int(cx) - R, int(cx) + R), np.arange(int(cy) - R, int(cy) + R))
         gx, gy = gx.ravel(), gy.ravel()
         wheat = grid[gy, gx] == 2
         self._stalks(gx[wheat], gy[wheat], hz[gy[wheat], gx[wheat]] if hz is not None
-                     else np.full(int(wheat.sum()), self.heights[-1]))
+                     else np.full(int(wheat.sum()), self.heights[2]))
         keep = grid[gy, gx] == 0
         gx, gy = gx[keep], gy[keep]
         # the same tufts on the same square every frame (hash of the cell, not a fresh random draw)
@@ -561,6 +585,21 @@ class Scene:
         old = self.tufts.data
         self.tufts.data = _points_mesh("Tufts", np.stack([tx, -ty, np.zeros(m)], -1),
                                        dict(scale=np.stack([s, s, sz], -1), rot=rot))
+        bpy.data.meshes.remove(old)
+
+    def set_pumpkins(self, grid, cx, cy, s_px):
+        """One pumpkin on each pumpkin square (colour 3) near the camera; from far away the leafy
+        squares alone show them. Called with set_tufts."""
+        if s_px <= 12: return
+        R = int(1.3 * max(W, H) / s_px) + 2
+        sub_ = grid[max(0, int(cy) - R):int(cy) + R, max(0, int(cx) - R):int(cx) + R]
+        gy, gx = np.nonzero(sub_ == 3); gy = gy + max(0, int(cy) - R); gx = gx + max(0, int(cx) - R)
+        h = lambda s: (np.sin((gx * 12.9898 + gy * 78.233 + s) * 1.7) * 43758.5453) % 1.0
+        n = len(gx); sc_ = 0.85 + 0.3 * h(1.1)
+        old = self.pumpkins.data
+        self.pumpkins.data = _points_mesh("Pumpkins", np.stack([gx + 0.5 + (h(2.2) - 0.5) * 0.12, -(gy + 0.5 + (h(3.3) - 0.5) * 0.12),
+                                                                np.full(n, self.heights[3])], -1) if n else [],
+                                          dict(scale=np.stack([sc_, sc_, sc_], -1), rot=np.stack([np.zeros(n), np.zeros(n), h(4.4) * 6.283], -1)) if n else {})
         bpy.data.meshes.remove(old)
 
     def _stalks(self, gx, gy, z, per=7):

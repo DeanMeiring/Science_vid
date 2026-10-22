@@ -24,6 +24,14 @@
   Experiment 5, four crops (LLRR); check the rule by simulation first. Branches
   `claude/episode-3` and `claude/episode-4-farmers` are pushed, stacked on PR #4; no PRs for
   them yet.
+- **Experiment 5: four crops** (started 22 Oct evening, Dean: "start making next video"). Branch
+  `claude/episode-5-crops` (stacked on `claude/episode-4-farmers`). `pipeline/crops.py` is the sim
+  and the check; `episodes/ep05_crops.py` the script (grass L, dirt L, wheat R, pumpkins R),
+  voiced in george (38.3 s), waiting for Dean to listen. Checked: every time Joe is back on his
+  first square facing the way he started, the field is a perfect mirror image (4,484 of 4,484
+  in 200k steps; never facing down, 0 of 752); 2,632 times by step 100,000. Source for "proved":
+  Wikipedia "Langton's ant" (pairs of equal turns -> symmetric over and over; Gale et al. 1995).
+  Ends teasing "three barns, one prize" (Monty Hall).
 - **Posted:** Experiments 1 and 2 on YouTube and Instagram. Dean posted
   Experiment 2's Reel from his phone (the API failed because it's over
   ~50 s): https://www.instagram.com/reel/DexWGACAEWc/

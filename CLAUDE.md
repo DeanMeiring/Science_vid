@@ -19,11 +19,14 @@
   Railway). It's a library of methods to reuse here. Copy what's needed;
   don't import across repos.
 
-## Where we left off (end of 22 Oct 2026)
-- **Parked after Experiment 4** (Dean: "we park it there for now"). Next, when Dean asks:
-  Experiment 5, four crops (LLRR); check the rule by simulation first. Branches
-  `claude/episode-3` and `claude/episode-4-farmers` are pushed, stacked on PR #4; no PRs for
-  them yet.
+## Where we left off (end of 22 Oct 2026, 23:00)
+- **Done for the day after Experiment 5** (Dean: "finish up for today, will continue tomorrow").
+  Next, when Dean asks: Experiment 6, "three barns, one prize" (Monty Hall), as Experiment 5's
+  last line promises; check the facts by simulation first. Idea from a comment: "Get 3 helpers".
+- **Experiment 5 posted 22 Oct 2026, 22:52** to both from the studio: YouTube
+  https://youtube.com/shorts/TKMkmPbBdc8 and Instagram https://www.instagram.com/reel/Dez4ouTlgJu/
+- Branches `claude/episode-3`, `claude/episode-4-farmers`, `claude/episode-5-crops` are pushed,
+  stacked on PR #4; no PRs for them yet.
 - **Experiment 5: four crops** (started 22 Oct evening, Dean: "start making next video"). Branch
   `claude/episode-5-crops` (stacked on `claude/episode-4-farmers`). `pipeline/crops.py` is the sim
   and the check; `episodes/ep05_crops.py` the script (grass L, dirt L, wheat R, pumpkins R),
@@ -54,6 +57,7 @@
   | 22 Oct 12:30 | Ep1 20 likes, Ep2 38 likes (2 comments), Ep3 0 (just out); 4 followers | Ep1 3, Ep2 3, Ep3 0 views; 1 subscriber |
 | 22 Oct 13:34 | Ep3 "a lot of views" (Dean) | Ep1 3, Ep2 4, Ep3 2 views; channel 29 views / 0.4 h watch time (28 days); 1 subscriber |
 | 22 Oct 20:05 | likes Ep1 23, Ep2 45, Ep3 132, Ep4 78 (6 h old); 7 followers | Ep1 3, Ep2 4, Ep3 2, Ep4 2 views; 1 subscriber |
+| 22 Oct 22:54 | likes Ep1 25, Ep2 51, Ep3 144, Ep4 149, Ep5 0 (just out); 9 followers | Ep1 4, Ep2 4, Ep3 3, Ep4 2, Ep5 0 views; 1 subscriber |
 
   YouTube is barely showing the Shorts while Instagram grows. Asked Dean to
   check in YouTube Studio that each video shows as a Short, its traffic

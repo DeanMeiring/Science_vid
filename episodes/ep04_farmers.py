@@ -18,6 +18,8 @@ Facts checked by simulation (pipeline/farmers.py, Oct 2026):
   - Joe alone from the same start: 342 dirt squares after 4,724 moves, never back.
 - Survey: helper within 4 squares, every facing (1,280 setups), up to 30,000 rounds:
   536 come back exactly ("about four in ten"); 4,724 rounds is the longest found.
+- Daisy (eats grass / leaves compost) and Joe (harvests / plants) follow the SAME rule: on grass
+  turn right and it becomes dirt, on dirt turn left and it grows back (Dean's idea, 22 Oct).
 - The survey result is in the description only (cut from the voice for length).
 - NOT claimed: why it happens, or that 4,724 is the longest possible (only the longest we found).
 """
@@ -27,10 +29,10 @@ THEME = "farm"
 # VOICE: Farmer Joe's default (pocket:george)
 
 NARRATION = [
-    ("start",  "Experiment number 4. One of you asked: what if I had a helper? Same rule as before. "
-               "On grass, turn right and dig. On dirt, turn left, and it grows back.",
-               "Experiment number four. One of you asked: what if I had a helper? Same rule as before. "
-               "On grass, turn right and dig. On dirt, turn left, and it grows back."),
+    ("start",  "Experiment number 4. You asked for a helper, so Daisy's in! She eats grass and turns right. "
+               "On bare dirt, she leaves compost, turns left, and it grows back. I harvest and plant the same way.",
+               "Experiment number four. You asked for a helper, so Daisy's in! She eats grass and turns right. "
+               "On bare dirt, she leaves compost, turns left, and it grows back. I harvest and plant the same way."),
     ("mess",   "We take turns. A hundred rounds. A thousand. What a mess!", None),
     ("meet",   "Then, at round 1,181, we meet, and something strange happens. We each walk back along "
                "the other's path, undoing every square.",
@@ -41,13 +43,13 @@ NARRATION = [
                "upside down."),
     ("home",   "Round 4,724: a perfect field, and we're right back where we started. Forever.",
                "Round forty-seven twenty-four: a perfect field, and we're right back where we started. Forever."),
-    ("next",   "Thanks for the idea! Next experiment: four crops. See y'all next harvest!", None),
+    ("next",   "Thanks for the idea! The farm's getting busy. Next experiment: four crops. See y'all next harvest!", None),
 ]
 
 TITLE = "Two farmers make a mess... then clean it up perfectly?!"
 DESCRIPTION = """Experiment #4: Farmer Joe gets a helper. A viewer's idea!
 
-Two farmers follow the same simple rule from Experiment #1: on grass, turn right and dig; on dirt, turn left and it grows back. They take turns. After 1,181 rounds of chaos they meet, and each one walks back along the other's path, undoing every square. At round 2,362 the field is spotless, then it all happens again upside down, and at round 4,724 both farmers are exactly back where they started. Forever.
+Joe and Daisy the sheep follow the same simple rule from Experiment #1. On grass, turn right (Daisy eats it, Joe harvests it). On bare dirt, turn left and it grows back (Daisy leaves compost, Joe plants). They take turns. After 1,181 rounds of chaos they meet, and each one walks back along the other's path, undoing every square. At round 2,362 the field is spotless, then it all happens again upside down, and at round 4,724 both farmers are exactly back where they started. Forever.
 
 We simulated 1,280 different starting positions: about four in ten come back like this. 4,724 rounds was the longest we found.
 

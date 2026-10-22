@@ -38,6 +38,8 @@
   check in YouTube Studio that each video shows as a Short, its traffic
   sources (Shorts feed?), and any warning icons. If they're all fine, it's
   probably new-channel slowness; a steady rhythm (every 2-3 days) helps.
+  22 Oct, later: Experiment 3 (the sheep) is getting a lot of views on Instagram;
+  YouTube still ~0. Dean's call: keep posting consistently on both.
 - Viewer comments so far: "two farmers end up back where they started"
   (idea for an episode, check by simulation) and an "infinite monkeys" joke
   tagging a friend on Experiment 2.

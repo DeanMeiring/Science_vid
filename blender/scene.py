@@ -220,7 +220,15 @@ class Scene:
             isi = _node(nt, "ShaderNodeMath", operation="GREATER_THAN"); isi.inputs[1].default_value = i - 0.5
             nt.links.new(a_blk.outputs["Fac"], isi.inputs[0])
             col = _mix(nt, isi.outputs[0], col, ci)
+        # painted cells (Experiment 3's trails): their own colour, glowing a little
+        a_paint = _node(nt, "ShaderNodeAttribute", attribute_type="INSTANCER", attribute_name="paint")
+        a_pw = _node(nt, "ShaderNodeAttribute", attribute_type="INSTANCER", attribute_name="painted")
+        col = _mix(nt, a_pw.outputs["Fac"], col, a_paint.outputs["Color"])
         nt.links.new(col, bb.inputs["Base Color"])
+        if not T["emit"]:
+            nt.links.new(a_paint.outputs["Color"], bb.inputs["Emission Color"])
+            pe = _node(nt, "ShaderNodeMath", operation="MULTIPLY"); pe.inputs[1].default_value = 0.35
+            nt.links.new(a_pw.outputs["Fac"], pe.inputs[0]); nt.links.new(pe.outputs[0], bb.inputs["Emission Strength"])
         if T["emit"]:
             bb.inputs["Emission Color"].default_value = lin(T["block_fresh"])
             em = _node(nt, "ShaderNodeMath", operation="MULTIPLY"); em.inputs[1].default_value = T["emit"]
@@ -363,6 +371,20 @@ class Scene:
         self.glow = bpy.data.objects.new("Glow", gd); self.sc.collection.objects.link(self.glow)
         self.glow.parent = self.root; self.glow.location = (0, 0, 0.9)
 
+    def set_dots(self, xs, ys, s_px, colour=(255, 255, 255)):
+        """Small glowing markers for many walkers at once (e.g. a herd of sheep seen from far away)."""
+        if not hasattr(self, "dots"):
+            dm, _ = _material("HerdDot", lin(colour), emit=(lin(colour), 3.0))
+            bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, segments=12, ring_count=6, location=(0, 0, 0))
+            src = bpy.context.object; src.data.materials.append(dm); src.hide_render = True; src.hide_viewport = True
+            self.dots = bpy.data.objects.new("Herd", _points_mesh("Herd", [], {})); self.sc.collection.objects.link(self.dots)
+            self.dots.modifiers.new("Inst", "NODES").node_group = _instancer_nodes("Herd", src)
+        n = len(xs); r = max(0.1, 5 / s_px)      # small up close, still visible from far away
+        old = self.dots.data
+        self.dots.data = _points_mesh("Herd", np.stack([np.asarray(xs) + 0.5, -(np.asarray(ys) + 0.5), np.full(n, r)], -1),
+                                      dict(scale=np.full((n, 3), r), rot=np.zeros((n, 3))))
+        bpy.data.meshes.remove(old)
+
     def add_barn(self, x, y, facing=0.0):
         """A little red barn with its door at grid cell (x, y), facing `facing` radians (world)."""
         red = _material("BarnRed", lin((176, 46, 38)), rough=0.8)[0]; trim = _material("BarnTrim", lin((240, 236, 226)), rough=0.7)[0]
@@ -398,16 +420,19 @@ class Scene:
         self.cam = bpy.data.objects.new("Cam", cd); self.sc.collection.objects.link(self.cam); self.sc.camera = self.cam
 
     # ---------- per frame ----------
-    def set_cells(self, xs, ys, hz, heat, kind):
+    def set_cells(self, xs, ys, hz, heat, kind, paint=None):
         """One point per visible cell: hz block height in cells (0 = flat floor tile), heat 0..1,
-        kind = colour number (0 floor tile, 1 dirt, 2 wheat, ...)."""
+        kind = colour number (0 floor tile, 1 dirt, 2 wheat, ...).
+        paint: optional (n, 3) linear RGB per cell; cells with a paint colour show it instead (trails)."""
         n = len(xs)
         pts = np.stack([xs + 0.5, -(ys + 0.5), np.zeros(n)], -1)
         hz = np.where(np.asarray(kind) > 0, np.maximum(hz, 0.008), 0.006)
         scl = np.stack([np.ones(n), np.ones(n), hz], -1)
         old = self.cells.data
+        painted = np.zeros(n, np.float32) if paint is None else np.ones(n, np.float32)
+        paint = np.zeros((n, 3), np.float32) if paint is None else np.asarray(paint, np.float32)
         self.cells.data = _points_mesh("Cells", pts, dict(scale=scl, rot=np.zeros((n, 3)), heat=heat,
-                                                         block=np.asarray(kind, np.float32)))
+                                                         block=np.asarray(kind, np.float32), paint=paint, painted=painted))
         bpy.data.meshes.remove(old)
 
     def set_tufts(self, grid, cx, cy, s_px, per=8, hz=None):

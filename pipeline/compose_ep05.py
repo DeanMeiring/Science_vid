@@ -177,7 +177,7 @@ for f in range(tl.nf):
             act_w = max([i for i, o in enumerate(c) if o["t0"] + LEAD <= tt] or [0])
             comp(img, layer(("cap", c[0]["t0"], act_w), caption_fn([o["w"] for o in c], act_w)))
     frame = np.clip(img, 0, 255).astype(np.uint8)
-    if thumb is None and tt >= tl.t_circle + 1.8: thumb = frame          # the whole crop circle from above
+    if thumb is None and tt >= tl.t_10k + 0.4: thumb = frame             # "MIRROR!" at step 10,012
     ff.stdin.write(frame.tobytes())
     if f % 150 == 0: print("frame", f, "/", tl.nf, flush=True)
 ff.stdin.close(); ff.wait()

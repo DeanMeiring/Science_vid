@@ -32,6 +32,10 @@
   in 200k steps; never facing down, 0 of 752); 2,632 times by step 100,000. Source for "proved":
   Wikipedia "Langton's ant" (pairs of equal turns -> symmetric over and over; Gale et al. 1995).
   Ends teasing "three barns, one prize" (Monty Hall).
+  **Rendered 22 Oct** (`renders/ep05_crops/ep05_crops.mp4`, 40.0 s, 21.7 MB; full render 42 min).
+  Dean picked style C: from above, looking down the mirror line, a glowing line + "MIRROR!" on
+  each mirror moment; while racing only mirror moments are shown, so every frame is a true
+  mirror image. Pumpkins added to the farm theme (`scene.set_pumpkins`). Not posted yet.
 - **Posted:** Experiments 1 and 2 on YouTube and Instagram. Dean posted
   Experiment 2's Reel from his phone (the API failed because it's over
   ~50 s): https://www.instagram.com/reel/DexWGACAEWc/

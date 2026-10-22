@@ -76,31 +76,94 @@
 - Script rule: every claim in a script must be checked by running the sim
   (or a solid source) before it goes in. No made-up facts.
 
-## Laptop: VS Code + Blender (next step)
-- Dean is moving this work to Claude Code in VS Code on his laptop so we can
-  use Blender and render locally.
-- **The laptop has no separate graphics card, but a very good CPU.** Plan:
-  - Blender headless (`blender -b -P script.py`), driven by Python.
-  - EEVEE on the built-in graphics if it works (estimate ~20-60 min per
-    47 s Short), or Cycles on the CPU with low samples + OpenImageDenoise
-    (estimate ~2-6 h, overnight).
-  - Instance one block mesh for all cells (geometry nodes / instancing),
-    simple materials, one soft light.
-  - Low-res drafts while tweaking.
-  - **First job:** build the Experiment #1 scene in Blender and benchmark
-    one frame in EEVEE vs Cycles on his laptop. Then Dean compares it with
-    the Pillow 3D look and picks one. These numbers are guesses until that
-    test.
+## Laptop: VS Code + Blender
+- **Windows 11**, Intel Core Ultra 7 265U (a 15 W laptop chip, 14 threads),
+  Intel built-in graphics, ~15 GB RAM.
+- **Be gentle on the laptop** (Dean asked): low priority, 4 render threads,
+  half-size EEVEE drafts, one render at a time. Ask before long or full-size
+  batches. `blender/ant_scene.py` defaults to this.
+- Blender 4.5 LTS is the portable zip in
+  `%LOCALAPPDATA%\Programs\Blender\blender-4.5.10-windows-x64\blender.exe`
+  (the installer needs admin rights). ffmpeg 9 is installed via winget.
+- `blender/ant_scene.py` renders one still: `blender -b -P blender/ant_scene.py
+  -- --step 12 --theme farm`. One block mesh is instanced on a point per
+  square (geometry nodes). Captions and counters stay in Pillow, laid over
+  the frames.
+- Benchmark (Oct 2026, 1080x1920, all threads):
+  - EEVEE: ~2 s/frame after a ~2 s warm-up, so ~45-50 min per 47 s Short.
+  - Cycles CPU, 48 samples: ~35 s/frame, so ~13 h per Short. Not worth it.
+- **Farm theme** (Dean's idea, being tried): a small farmer on a grass
+  field. On grass he turns right and digs it into dirt; on dirt he turns
+  left and it grows back. Ant theme kept as `--theme ant`.
 - Keep the Pillow renderer working as the fallback (and for automation
   later on Railway, where there's no GPU).
-- The OS isn't confirmed yet (Windows or Mac?). Ask him.
+- CLIPPER is cloned next to this repo at `C:\ANALYSIS\ANALYSIS\CLIPPER`
+  (Dean OK'd it) to copy code from.
+
+## Episode pipeline and studio (Oct 2026)
+- `episodes/epNN_*.py` holds the script: (caption, spoken text, mode,
+  target step), rule cards, title, description.
+- The steps: `pipeline/voice.py` (narration + `timing.json`) →
+  `blender/render_video.py` (frames) → `pipeline/compose.py` (captions,
+  sound, mp4 + thumbnail). Commands are in the README.
+- Real line lengths from the voice set the timing. Caption words are
+  spread by word length; Whisper alignment is still to do.
+- `studio/app.py` (localhost:8765) is where Dean watches and posts.
+  - YouTube: CLIPPER's OAuth + resumable upload, category 28, `#Shorts`
+    added. The synthetic box is **off** by default (Dean asked, Oct 2026);
+    it can still be ticked on the page.
+  - Instagram: Facebook Login + resumable upload to rupload.facebook.com,
+    because the laptop has no public URL.
+  - Posting is always a click by Dean, with a confirm. Never post
+    automatically.
+- First episode: farm theme. The farmer is **Farmer Joe** (Dean's name,
+  Oct 2026); he may become the mascot of the whole channel, with every
+  experiment given a farm twist (not decided yet; the Instagram account is
+  already named after him). His trail is fresh grass that flashes yellow-green (picked as a
+  default, not by Dean yet).
+- Accounts connected in the studio (Oct 2026):
+  - Instagram: **@farmerjoe1111**, a Creator account linked to the Farmer
+    Joe Facebook Page. `INSTAGRAM_USERNAME` in `.env` pins it.
+  - YouTube: the **Farmer Joe** channel (`@farmer-joe-1111`, id
+    UCW4elsuFZaMRHhMRq6hKGZA). It showed as "Caught On Code" at first: that
+    was the same channel under its old name.
+- **Episode 1 posted 21 Oct 2026, 15:45**, public on both, via "Post to
+  both": YouTube https://youtube.com/shorts/z1UEqgtLkpM and Instagram
+  https://www.instagram.com/reel/Dewi-t-ErwB/. Next: Episode 2, "what
+  happens when Joe plants a third crop?" (check the 3-colour rule by
+  simulation first), and give the video Joe the profile picture's face
+  (eyes, cheeks, moustache).
 
 ## Voice
-- Narration is a cloned voice, most likely **Dean's friend's** (he's keen).
-  Dean will upload a video or audio file of him talking.
-- Only with the friend's OK. Record his consent with the sample, like
-  CLIPPER's `/voices` page (`consent` in `voice.json`). Samples live in
-  `voices/` (gitignored, never committed).
+- **Farmer Joe's voice (from Episode 2, Oct 2026): a blend of Kokoro
+  `am_michael` 55% + `am_santa` 45%** (`FARMER_JOE` in `pipeline/tts.py`).
+  Dean first had 68/32, then asked for "santa a bit more, 55/45".
+  - Dean picked it after hearing deep natural male voices; he liked michael,
+    santa and Pocket bill_boerst, and asked for a mix ("michael 75 santa
+    35", read as about 68/32). Sample: `renders/voice_samples/FARMER_JOE_55_45.wav`.
+  - Pitch-shifted "cartoon" voices sounded weird to him (the tool was
+    removed). Keep voices natural.
+  - A real Texan accent isn't available free. Options he was given: a
+    consenting person with a Southern accent records 30 s for a Pocket
+    clone, a paid service (needs his OK), or his own voice clone.
+  - Kokoro is Apache-2.0. Credit line: `credit` in `timing.json`
+    ("Narration voice: Kokoro TTS (Apache-2.0)."). Episode 1 stays on
+    `pocket:george` (its `VOICE`), as posted.
+- **Episode 1's voice: Kyutai Pocket TTS preset `george`.** Dean's
+  friend wasn't available, and Dean has no good mic, so he picked from 8
+  free voices (`voice/samples.py`, Kokoro + Pocket presets).
+  - `george` is VCTK speaker p315, licensed CC-BY-4.0: commercial use is
+    OK, but credit it in every video description, e.g. "Narration voice:
+    Kyutai Pocket TTS, voice from the VCTK corpus (CC-BY-4.0)".
+  - Use `model.get_state_for_audio_prompt("george")`. On Windows, run
+    Python in UTF-8 mode (`-X utf8`), or pocket_tts crashes reading its
+    config.
+  - `HF_TOKEN` is in `.env` (gitignored). Packages are in `.venv`.
+  - Avoid the Pocket presets from the `expresso/` and `ears/` folders: they
+    are non-commercial.
+- If a friend's cloned voice is used later: only with his OK. Record his
+  consent with the sample, like CLIPPER's `/voices` page (`consent` in
+  `voice.json`). Samples live in `voices/` (gitignored, never committed).
 - Reuse CLIPPER's `clipper/voice_clone.py`:
   - Kyutai Pocket TTS, CPU, ~0.6 GB RAM, CC-BY-4.0.
   - Needs `HF_TOKEN` from an account that accepted the terms at
@@ -111,7 +174,8 @@
     there.
 - On YouTube, a cloned voice of someone else needs the altered/synthetic
   content label (`status.containsSyntheticMedia`, as CLIPPER sets it for
-  friends' voices).
+  friends' voices). For the stock `george` voice, check YouTube's current
+  rule before the first upload.
 
 ## Pieces in CLIPPER worth copying (paths in that repo)
 - `clipper/voice_clone.py`: voice cloning and number spelling.

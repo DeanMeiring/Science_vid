@@ -77,6 +77,12 @@
   Lesson: a flat image at z=0.02 vanishes into the floor from far away (lift it, z=0.4).
   Lesson: Claude Code stops background jobs when the laptop runs low on memory; frames on disk
   are kept, so a render resumes where it stopped.
+- **Experiment 4 posted to YouTube 22 Oct 2026, 16:02** (https://youtube.com/shorts/DhlirSjSuRo).
+  Instagram failed: "ProcessingFailedError" at the upload step. Tested without posting
+  (`publish=False`): a 24.6 MB re-encode failed the same way, and so did Experiment 3's video,
+  which had posted fine that morning. So it isn't this video (not length, not size); Instagram's
+  upload refused everything that afternoon. That also casts doubt on the "~50 s limit" above
+  (one failure may have been this, not length). Next time: retry later, or post from the phone.
 - Instagram insights (views, reach) need the `instagram_manage_insights`
   permission; not requested yet.
 

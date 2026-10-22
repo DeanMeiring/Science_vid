@@ -23,8 +23,24 @@
 - **Posted:** Experiments 1 and 2 on YouTube and Instagram. Dean posted
   Experiment 2's Reel from his phone (the API failed because it's over
   ~50 s): https://www.instagram.com/reel/DexWGACAEWc/
-- **Stats on 22 Oct:** Instagram 17 and 20 likes, 3 followers. YouTube only
-  3 views each so far (a new channel; normal at first).
+- **Experiment 3 posted 22 Oct 2026, 10:25** to both from the studio
+  (38 s, so Instagram's API took it): YouTube
+  https://youtube.com/shorts/EUE8YBSfB6I and Instagram
+  https://www.instagram.com/reel/DeyjHWhgJIm/
+- **Stats log** (track the trend; check with Dean before acting on it):
+
+  | Date | Instagram | YouTube |
+  |---|---|---|
+  | 22 Oct 08:00 | Ep1 17 likes, Ep2 20; 3 followers | Ep1 3 views, Ep2 3 views; 1 subscriber |
+  | 22 Oct 12:30 | Ep1 20 likes, Ep2 38 likes (2 comments), Ep3 0 (just out); 4 followers | Ep1 3, Ep2 3, Ep3 0 views; 1 subscriber |
+
+  YouTube is barely showing the Shorts while Instagram grows. Asked Dean to
+  check in YouTube Studio that each video shows as a Short, its traffic
+  sources (Shorts feed?), and any warning icons. If they're all fine, it's
+  probably new-channel slowness; a steady rhythm (every 2-3 days) helps.
+- Viewer comments so far: "two farmers end up back where they started"
+  (idea for an episode, check by simulation) and an "infinite monkeys" joke
+  tagging a friend on Experiment 2.
 - **GitHub:** PR #3 (`claude/voice-cartoon` → `main`, all the pipeline
   work) is open and waits for Dean to merge it (Claude Code blocks Claude
   from merging). `claude/episode-2` is stacked on top of it; its PR is #4.

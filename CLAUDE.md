@@ -188,6 +188,10 @@
   the first 1-2 s, rules in 1-2 quick lines, speeding up by ~6-8 s; voice
   whole paragraphs in one go (no per-line gaps or MIN_DUR padding) and
   drive sim cues and captions from Whisper word timings; aim for < 50 s.
+- **Experiment 3 voice (22 Oct):** Dean picked take A (`narration_flow.wav`,
+  the whole script voiced in one go, 36.8 s) and the name Daisy. His rule:
+  "don't generate it too long", with Joe describing what's happening while
+  the experiment starts, then speeding up more and more to the end.
 - **From Experiment 3, Dean wants to try a more amateur, personal feel.**
   The polished look is "very good", but he wants it less slick. Try a few
   different setups and show samples before committing.

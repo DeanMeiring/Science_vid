@@ -19,7 +19,11 @@
   Railway). It's a library of methods to reuse here. Copy what's needed;
   don't import across repos.
 
-## Where we left off (end of 21 Oct 2026)
+## Where we left off (end of 22 Oct 2026)
+- **Parked after Experiment 4** (Dean: "we park it there for now"). Next, when Dean asks:
+  Experiment 5, four crops (LLRR); check the rule by simulation first. Branches
+  `claude/episode-3` and `claude/episode-4-farmers` are pushed, stacked on PR #4; no PRs for
+  them yet.
 - **Posted:** Experiments 1 and 2 on YouTube and Instagram. Dean posted
   Experiment 2's Reel from his phone (the API failed because it's over
   ~50 s): https://www.instagram.com/reel/DexWGACAEWc/

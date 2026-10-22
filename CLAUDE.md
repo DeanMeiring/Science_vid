@@ -33,6 +33,7 @@
   |---|---|---|
   | 22 Oct 08:00 | Ep1 17 likes, Ep2 20; 3 followers | Ep1 3 views, Ep2 3 views; 1 subscriber |
   | 22 Oct 12:30 | Ep1 20 likes, Ep2 38 likes (2 comments), Ep3 0 (just out); 4 followers | Ep1 3, Ep2 3, Ep3 0 views; 1 subscriber |
+| 22 Oct 13:34 | Ep3 "a lot of views" (Dean) | Ep1 3, Ep2 4, Ep3 2 views; channel 29 views / 0.4 h watch time (28 days); 1 subscriber |
 
   YouTube is barely showing the Shorts while Instagram grows. Asked Dean to
   check in YouTube Studio that each video shows as a Short, its traffic
@@ -40,6 +41,8 @@
   probably new-channel slowness; a steady rhythm (every 2-3 days) helps.
   22 Oct, later: Experiment 3 (the sheep) is getting a lot of views on Instagram;
   YouTube still ~0. Dean's call: keep posting consistently on both.
+  Checked in YouTube Studio (22 Oct): all three show as Shorts, no warnings or
+  notifications. So it's new-channel slowness, not a problem with the uploads.
 - Viewer comments so far: "two farmers end up back where they started"
   (idea for an episode, check by simulation) and an "infinite monkeys" joke
   tagging a friend on Experiment 2.

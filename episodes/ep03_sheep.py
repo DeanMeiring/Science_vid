@@ -41,6 +41,15 @@ NARRATION = [
     ("next",    "Next experiment: four crops. See y'all next harvest!", None),
 ]
 
+# The walks shown (picked by simulation, Oct 2026; counters on screen are these runs' real results):
+# - Daisy, seed 583: never home until step 6,470 (lands on "Yes!"); 68 squares out at step 1,000,
+#   110 at her furthest.
+# - the herd: 40 sheep, seed 102, 20,000 steps each: 33 of 40 get home in that time.
+# - the chickens: 12 in 3D, seed 204, 4,000 steps each: exactly 4 of 12 get home (one in three).
+DAISY = dict(seed=583, home_step=6470)
+HERD = dict(seed=102, sheep=40, steps=20000)
+FLOCK = dict(seed=204, chickens=12, steps=4000)
+
 TITLE = "Farmer Joe's sheep wandered off. Will she ever come home?"
 DESCRIPTION = """Experiment #3: a random walk on Farmer Joe's farm.
 

@@ -371,7 +371,7 @@ class Scene:
         self.glow = bpy.data.objects.new("Glow", gd); self.sc.collection.objects.link(self.glow)
         self.glow.parent = self.root; self.glow.location = (0, 0, 0.9)
 
-    def set_dots(self, xs, ys, s_px, colour=(255, 255, 255)):
+    def set_dots(self, xs, ys, s_px, colour=(255, 255, 255), zs=None):
         """Small glowing markers for many walkers at once (e.g. a herd of sheep seen from far away)."""
         if not hasattr(self, "dots"):
             dm, _ = _material("HerdDot", lin(colour), emit=(lin(colour), 3.0))
@@ -381,9 +381,106 @@ class Scene:
             self.dots.modifiers.new("Inst", "NODES").node_group = _instancer_nodes("Herd", src)
         n = len(xs); r = max(0.1, 5 / s_px)      # small up close, still visible from far away
         old = self.dots.data
-        self.dots.data = _points_mesh("Herd", np.stack([np.asarray(xs) + 0.5, -(np.asarray(ys) + 0.5), np.full(n, r)], -1),
+        z = np.full(n, r) if zs is None else np.asarray(zs, float)
+        self.dots.data = _points_mesh("Herd", np.stack([np.asarray(xs) + 0.5, -(np.asarray(ys) + 0.5), z], -1),
                                       dict(scale=np.full((n, 3), r), rot=np.zeros((n, 3))))
         bpy.data.meshes.remove(old)
+
+    def set_trail_image(self, rgba, x0, y0, z=0.02, gap=0.07, glow=0.35):
+        """Paint trails as one image lying on the field (light, however long the trails get).
+        rgba: (S, S, 4) floats 0..1 in sRGB, row 0 = grid row y0, column 0 = grid column x0.
+        Each pixel is one square, drawn with a thin grass-coloured gap round it, glowing a little."""
+        S = rgba.shape[0]
+        if getattr(self, "_trail_size", None) != S:
+            img = bpy.data.images.new("Trail", S, S, alpha=True); img.colorspace_settings.name = "sRGB"
+            mat = bpy.data.materials.new("Trail"); mat.use_nodes = True; nt = mat.node_tree
+            for n_ in list(nt.nodes): nt.nodes.remove(n_)
+            outn = _node(nt, "ShaderNodeOutputMaterial"); bsdf = _node(nt, "ShaderNodeBsdfPrincipled")
+            tex = _node(nt, "ShaderNodeTexImage", interpolation="Closest"); tex.image = img
+            uv = _node(nt, "ShaderNodeTexCoord")
+            # the gap: UV * S is the position in squares; keep only the inside of each square
+            mul = _node(nt, "ShaderNodeVectorMath", operation="MULTIPLY"); mul.inputs[1].default_value = (S, S, 1)
+            nt.links.new(uv.outputs["UV"], mul.inputs[0]); self._trail_scale = mul.inputs[1]
+            fr = _node(nt, "ShaderNodeVectorMath", operation="FRACTION"); nt.links.new(mul.outputs[0], fr.inputs[0])
+            sp = _node(nt, "ShaderNodeSeparateXYZ"); nt.links.new(fr.outputs[0], sp.inputs[0])
+            gx = _node(nt, "ShaderNodeMath", operation="GREATER_THAN"); gx.inputs[1].default_value = gap
+            gy = _node(nt, "ShaderNodeMath", operation="GREATER_THAN"); gy.inputs[1].default_value = gap
+            nt.links.new(sp.outputs["X"], gx.inputs[0]); nt.links.new(sp.outputs["Y"], gy.inputs[0])
+            m1 = _node(nt, "ShaderNodeMath", operation="MULTIPLY"); nt.links.new(gx.outputs[0], m1.inputs[0]); nt.links.new(gy.outputs[0], m1.inputs[1])
+            m2 = _node(nt, "ShaderNodeMath", operation="MULTIPLY"); nt.links.new(m1.outputs[0], m2.inputs[0]); nt.links.new(tex.outputs["Alpha"], m2.inputs[1])
+            nt.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"]); nt.links.new(tex.outputs["Color"], bsdf.inputs["Emission Color"])
+            bsdf.inputs["Emission Strength"].default_value = glow; bsdf.inputs["Roughness"].default_value = 0.8
+            transp = _node(nt, "ShaderNodeBsdfTransparent"); mixs = _node(nt, "ShaderNodeMixShader")
+            nt.links.new(m2.outputs[0], mixs.inputs[0]); nt.links.new(transp.outputs[0], mixs.inputs[1]); nt.links.new(bsdf.outputs[0], mixs.inputs[2])
+            nt.links.new(mixs.outputs[0], outn.inputs["Surface"])
+            if hasattr(mat, "surface_render_method"): mat.surface_render_method = "DITHERED"
+            bpy.ops.mesh.primitive_plane_add(size=1, location=(0, 0, 0)); pl = bpy.context.object; pl.name = "TrailPlane"
+            pl.data.materials.append(mat)
+            old = getattr(self, "trail_plane", None)
+            if old: bpy.data.objects.remove(old)
+            self.trail_plane, self.trail_img, self._trail_size = pl, img, S
+        pl = self.trail_plane
+        pl.scale = (S, S, 1); pl.location = (x0 + S / 2, -(y0 + S / 2), z)
+        self.trail_img.pixels.foreach_set(np.ascontiguousarray(rgba[::-1], np.float32).ravel())   # Blender rows go bottom-up
+        self.trail_img.update()
+
+    def set_beads(self, pts, rgb, radius=0.3):
+        """Glowing beads (e.g. the squares a chicken has flown through, in 3D): pts (n, 3) in
+        (grid x, grid y, height); rgb (n, 3) linear colours."""
+        if not hasattr(self, "beads"):
+            mat, b = _material("Bead", (1, 1, 1, 1), rough=0.4)
+            nt = mat.node_tree; at = _node(nt, "ShaderNodeAttribute", attribute_type="INSTANCER", attribute_name="paint")
+            nt.links.new(at.outputs["Color"], b.inputs["Base Color"]); nt.links.new(at.outputs["Color"], b.inputs["Emission Color"])
+            b.inputs["Emission Strength"].default_value = 1.2
+            bpy.ops.mesh.primitive_ico_sphere_add(radius=1.0, subdivisions=2, location=(0, 0, 0))
+            src = bpy.context.object; src.data.materials.append(mat); src.hide_render = True; src.hide_viewport = True
+            self.beads = bpy.data.objects.new("Beads", _points_mesh("Beads", [], {})); self.sc.collection.objects.link(self.beads)
+            self.beads.modifiers.new("Inst", "NODES").node_group = _instancer_nodes("Beads", src)
+        pts = np.asarray(pts, float); n = len(pts)
+        world = np.stack([pts[:, 0] + 0.5, -(pts[:, 1] + 0.5), pts[:, 2]], -1) if n else np.zeros((0, 3))
+        old = self.beads.data
+        self.beads.data = _points_mesh("Beads", world, dict(scale=np.full((n, 3), radius), rot=np.zeros((n, 3)), paint=rgb))
+        bpy.data.meshes.remove(old)
+
+    def add_nest(self, x, y, z):
+        """The chickens' home in the sky: a straw nest sitting on a little cloud (grid x, y; height z)."""
+        straw = _material("Nest", lin((214, 170, 80)), rough=0.9)[0]
+        puff = _material("Cloud", lin((255, 255, 255)), rough=1.0, emit=(lin((255, 255, 255)), 0.25))[0]
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.9, minor_radius=0.35, location=(x + 0.5, -(y + 0.5), z - 0.3))
+        nest = bpy.context.object; nest.data.materials.append(straw); bpy.ops.object.shade_smooth()
+        for dx, dy, dz, r in ((0, 0, -1.3, 1.6), (1.5, 0.3, -1.5, 1.2), (-1.5, -0.2, -1.5, 1.25), (0.4, 1.3, -1.6, 1.1),
+                              (-0.5, -1.3, -1.6, 1.1), (2.4, -0.8, -1.9, 0.8), (-2.3, 0.9, -1.9, 0.85)):
+            bpy.ops.mesh.primitive_uv_sphere_add(radius=r, segments=20, ring_count=10, location=(x + 0.5 + dx, -(y + 0.5) + dy, z + dz))
+            o = bpy.context.object; o.scale = (1, 1, 0.7); o.data.materials.append(puff); bpy.ops.object.shade_smooth()
+        gd = bpy.data.lights.new("NestGlow", "POINT"); gd.energy = 0; gd.color = (1.0, 0.85, 0.5); gd.shadow_soft_size = 0.5
+        self.nest_glow = bpy.data.objects.new("NestGlow", gd); self.sc.collection.objects.link(self.nest_glow)
+        self.nest_glow.location = (x + 0.5, -(y + 0.5), z + 0.6)
+        return nest
+
+    def set_sky(self, rgb):
+        """What the camera sees above the horizon (the scene is still lit by the normal world colour)."""
+        wnt = self.sc.world.node_tree
+        if not hasattr(self, "_sky"):
+            self._sky = _node(wnt, "ShaderNodeBackground"); lp = _node(wnt, "ShaderNodeLightPath"); mx = _node(wnt, "ShaderNodeMixShader")
+            wnt.links.new(wnt.nodes["Background"].outputs[0], mx.inputs[1]); wnt.links.new(self._sky.outputs[0], mx.inputs[2])
+            wnt.links.new(lp.outputs["Is Camera Ray"], mx.inputs[0]); wnt.links.new(mx.outputs[0], wnt.nodes["World Output"].inputs["Surface"])
+        self._sky.inputs["Color"].default_value = lin(rgb); self._sky.inputs["Strength"].default_value = 1.0
+
+    def add_character(self, character):
+        """A second character (e.g. Joe watching while Daisy walks). Returns a handle for set_character."""
+        keep = {k: getattr(self, k) for k in ("root", "body", "legs", "hat", "dot", "glow", "character")}
+        self.character = character; self._walker()
+        handle = {k: getattr(self, k) for k in ("root", "body", "legs", "hat", "dot", "glow")}
+        for k, v in keep.items(): setattr(self, k, v)
+        return handle
+
+    def set_character(self, handle, *args, **kw):
+        """set_walker for a character made with add_character."""
+        keep = {k: getattr(self, k) for k in handle}
+        for k, v in handle.items(): setattr(self, k, v)
+        try: self.set_walker(*args, **kw)
+        finally:
+            for k, v in keep.items(): setattr(self, k, v)
 
     def add_barn(self, x, y, facing=0.0):
         """A little red barn with its door at grid cell (x, y), facing `facing` radians (world)."""
@@ -502,11 +599,12 @@ class Scene:
                 self.hat.location, self.hat.rotation_euler = hat
         self.glow.data.energy = 6.0 * max(1, 30 / s_px) ** 2
 
-    def set_camera(self, cx, cy, s_px, yaw_deg):
-        yaw = math.radians(yaw_deg)
-        fwd = Vector((math.sin(yaw) * math.cos(PITCH), math.cos(yaw) * math.cos(PITCH), -math.sin(PITCH)))
-        self.cam.location = Vector((cx, -cy, 0)) - fwd * (FOC / s_px)
-        self.cam.rotation_euler = (math.pi / 2 - PITCH, 0, -yaw)
+    def set_camera(self, cx, cy, s_px, yaw_deg, pitch_deg=None, tz=0.0):
+        """Look at grid point (cx, cy) at height tz, s_px pixels per cell there; pitch defaults to 54 deg."""
+        yaw = math.radians(yaw_deg); pitch = PITCH if pitch_deg is None else math.radians(pitch_deg)
+        fwd = Vector((math.sin(yaw) * math.cos(pitch), math.cos(yaw) * math.cos(pitch), -math.sin(pitch)))
+        self.cam.location = Vector((cx, -cy, tz)) - fwd * (FOC / s_px)
+        self.cam.rotation_euler = (math.pi / 2 - pitch, 0, -yaw)
 
     def render(self, path, fmt="JPEG"):
         self.sc.render.filepath = str(path)

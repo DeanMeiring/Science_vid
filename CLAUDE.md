@@ -38,6 +38,7 @@
   | 22 Oct 08:00 | Ep1 17 likes, Ep2 20; 3 followers | Ep1 3 views, Ep2 3 views; 1 subscriber |
   | 22 Oct 12:30 | Ep1 20 likes, Ep2 38 likes (2 comments), Ep3 0 (just out); 4 followers | Ep1 3, Ep2 3, Ep3 0 views; 1 subscriber |
 | 22 Oct 13:34 | Ep3 "a lot of views" (Dean) | Ep1 3, Ep2 4, Ep3 2 views; channel 29 views / 0.4 h watch time (28 days); 1 subscriber |
+| 22 Oct 20:05 | likes Ep1 23, Ep2 45, Ep3 132, Ep4 78 (6 h old); 7 followers | Ep1 3, Ep2 4, Ep3 2, Ep4 2 views; 1 subscriber |
 
   YouTube is barely showing the Shorts while Instagram grows. Asked Dean to
   check in YouTube Studio that each video shows as a Short, its traffic
@@ -47,6 +48,8 @@
   YouTube still ~0. Dean's call: keep posting consistently on both.
   Checked in YouTube Studio (22 Oct): all three show as Shorts, no warnings or
   notifications. So it's new-channel slowness, not a problem with the uploads.
+- New comments (22 Oct evening): Ep4 "Get 3 helpers" (idea: three farmers?); Ep3 "Shouldn't they
+  all head back home at infinity?" (on a flat field yes, almost surely; in 3D no, ~34% ever do).
 - Viewer comments so far: "two farmers end up back where they started"
   (idea for an episode, check by simulation) and an "infinite monkeys" joke
   tagging a friend on Experiment 2.

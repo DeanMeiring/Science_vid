@@ -282,6 +282,7 @@ class Scene:
         self.body.parent = self.root
         mats = {}
         def mat(name, rgb, rough=0.6):
+            rgb = getattr(self, "_recolour", {}).get(name, rgb)
             if name not in mats: mats[name] = _material(name, lin(rgb), rough=rough)[0]
             return mats[name]
         def part(kind, loc, scale=(1, 1, 1), m=None, rot=None, parent=None, **kw):
@@ -466,10 +467,13 @@ class Scene:
             wnt.links.new(lp.outputs["Is Camera Ray"], mx.inputs[0]); wnt.links.new(mx.outputs[0], wnt.nodes["World Output"].inputs["Surface"])
         self._sky.inputs["Color"].default_value = lin(rgb); self._sky.inputs["Strength"].default_value = 1.0
 
-    def add_character(self, character):
-        """A second character (e.g. Joe watching while Daisy walks). Returns a handle for set_character."""
+    def add_character(self, character, recolour=None):
+        """A second character (e.g. Joe watching while Daisy walks). Returns a handle for set_character.
+        recolour: {material name: rgb}, e.g. {"Shirt": (60, 140, 230)} for a farmer who isn't Joe."""
         keep = {k: getattr(self, k) for k in ("root", "body", "legs", "hat", "dot", "glow", "character")}
-        self.character = character; self._walker()
+        self.character = character; self._recolour = recolour or {}
+        try: self._walker()
+        finally: self._recolour = {}
         handle = {k: getattr(self, k) for k in ("root", "body", "legs", "hat", "dot", "glow")}
         for k, v in keep.items(): setattr(self, k, v)
         return handle

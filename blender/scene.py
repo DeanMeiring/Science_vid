@@ -103,7 +103,9 @@ def _points_mesh(name, pts, attrs):
 
 
 class Scene:
-    def __init__(self, theme="farm", scale=50, threads=4, engine="eevee", samples=0):
+    def __init__(self, theme="farm", scale=50, threads=4, engine="eevee", samples=0, character=None):
+        """character: who walks: "joe" (farm default), "ant" (ant default) or "sheep" (Daisy)."""
+        self.character = character or ("ant" if theme == "ant" else "joe")
         self.theme = theme; self.T = T = THEMES[theme]; self.HB = T["block_h"]
         self.heights = [0.0] + [c[2] for c in T["crops"]]    # block height per colour
         bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -285,7 +287,29 @@ class Scene:
             return part("cylinder", (a + b) / 2, m=m, rot=v.to_track_quat("Z", "Y").to_euler(),
                         radius=r, depth=v.length, vertices=verts, parent=parent)
         self.legs = []; self.hat = None
-        if self.theme == "ant":
+        if self.character == "sheep":
+            # Daisy: a fluffy white body, black face and legs, built facing +X, trotting on diagonal leg pairs
+            self.body.scale = (2.1, 2.1, 2.1)          # big enough to read on a phone
+            wool = mat("Wool", (246, 244, 236), 0.9); black = mat("SheepBlack", (34, 30, 32), 0.6)
+            eye = mat("Eye", (20, 20, 24), 0.2)
+            white = _material("EyeShine", lin((255, 255, 255)), emit=(lin((255, 255, 255)), 2.0))[0]
+            for side in (-1, 1):
+                hip = bpy.data.objects.new(f"Hip{side}", None); self.sc.collection.objects.link(hip)
+                hip.parent = self.body; hip.location = (0, 0, 0.17); self.legs.append(hip)
+                for lx, ly in ((0.1, 0.065 * side), (-0.1, -0.065 * side)):     # front one side, back the other
+                    part("cylinder", (lx, ly, -0.085), m=black, parent=hip, radius=0.022, depth=0.17, vertices=10)
+            for dx, dy, dz, r in ((0, 0, 0.3, 0.13), (0.08, 0.05, 0.31, 0.1), (0.08, -0.05, 0.31, 0.1),
+                                  (-0.09, 0.05, 0.3, 0.1), (-0.09, -0.05, 0.3, 0.1), (0.0, 0.0, 0.38, 0.1),
+                                  (0.1, 0.0, 0.37, 0.08), (-0.11, 0.0, 0.37, 0.08), (0.0, 0.08, 0.27, 0.09),
+                                  (0.0, -0.08, 0.27, 0.09)):                   # a fluffy cloud of wool
+                part("uv_sphere", (dx, dy, dz), m=wool, radius=r, segments=16, ring_count=8)
+            part("uv_sphere", (0.2, 0, 0.36), (1.25, 0.85, 0.95), black, radius=0.065, segments=16, ring_count=8)  # face
+            part("uv_sphere", (0.19, 0, 0.42), (1.0, 1.4, 0.7), wool, radius=0.05, segments=12, ring_count=6)      # tuft
+            for side in (-1, 1):
+                part("uv_sphere", (0.17, side * 0.075, 0.37), (0.6, 1.2, 0.45), black, radius=0.04, segments=10, ring_count=6)  # ears
+                part("uv_sphere", (0.255, side * 0.032, 0.385), m=eye, radius=0.013, segments=10, ring_count=6)
+                part("uv_sphere", (0.265, side * 0.028, 0.39), m=white, radius=0.004, segments=6, ring_count=4)
+        elif self.theme == "ant":
             am = mat("Ant", (52, 28, 14), 0.3)
             for o_, r, z in ((-0.3, 0.17, 0.16), (0.0, 0.11, 0.15), (0.24, 0.13, 0.16)):
                 part("uv_sphere", (o_, 0, z), (1.15, 1, 0.9), am, radius=r, segments=24, ring_count=12)
@@ -338,6 +362,35 @@ class Scene:
         gd.color = (1.0, 0.6, 0.2) if self.theme == "ant" else (1.0, 0.9, 0.7)
         self.glow = bpy.data.objects.new("Glow", gd); self.sc.collection.objects.link(self.glow)
         self.glow.parent = self.root; self.glow.location = (0, 0, 0.9)
+
+    def add_barn(self, x, y, facing=0.0):
+        """A little red barn with its door at grid cell (x, y), facing `facing` radians (world)."""
+        red = _material("BarnRed", lin((176, 46, 38)), rough=0.8)[0]; trim = _material("BarnTrim", lin((240, 236, 226)), rough=0.7)[0]
+        roofm = _material("BarnRoof", lin((70, 62, 60)), rough=0.85)[0]
+        barn = bpy.data.objects.new("Barn", None); self.sc.collection.objects.link(barn)
+        barn.location = (x + 0.5, -(y + 0.5), 0); barn.rotation_euler = (0, 0, facing)
+        barn.scale = (1.8, 1.8, 1.8)            # big enough to read as "home" from far away
+        def box(loc, size, m):
+            bpy.ops.mesh.primitive_cube_add(size=1, location=loc); o = bpy.context.object
+            o.scale = size; o.parent = barn; o.data.materials.append(m); return o
+        box((-1.0, 0, 0.55), (1.6, 1.5, 1.1), red)                                  # walls (door side faces +X)
+        # gable roof: the ridge runs front to back, so the triangle faces the door like a classic barn
+        bm = bmesh.new()
+        v = [[bm.verts.new((x_, -0.84, 1.1)), bm.verts.new((x_, 0.84, 1.1)), bm.verts.new((x_, 0, 1.72))]
+             for x_ in (-1.86, -0.14)]
+        bm.faces.new((v[0][0], v[1][0], v[1][2], v[0][2])); bm.faces.new((v[0][1], v[0][2], v[1][2], v[1][1]))
+        bm.faces.new((v[0][0], v[0][2], v[0][1])); bm.faces.new((v[1][0], v[1][1], v[1][2]))
+        bm.faces.new((v[0][0], v[0][1], v[1][1], v[1][0]))
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        rm = bpy.data.meshes.new("Roof"); bm.to_mesh(rm); bm.free()
+        roof = bpy.data.objects.new("Roof", rm); self.sc.collection.objects.link(roof); roof.parent = barn
+        rm.materials.append(roofm)
+        gable = box((-0.17, 0, 1.3), (0.02, 1.1, 0.06), trim)                       # a trim line under the gable
+        box((-0.19, 0, 0.42), (0.04, 0.7, 0.84), trim)                               # door frame
+        box((-0.17, 0, 0.4), (0.04, 0.6, 0.76), red)                                 # door
+        for a in (1, -1):                                                            # the white cross on the door
+            d = box((-0.15, 0, 0.4), (0.03, 0.06, 0.95), trim); d.rotation_euler = (a * 0.67, 0, 0)
+        return barn
 
     def _camera(self):
         cd = bpy.data.cameras.new("Cam"); cd.sensor_fit = "HORIZONTAL"; cd.sensor_width = 36

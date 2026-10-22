@@ -103,8 +103,11 @@
 - **Windows 11**, Intel Core Ultra 7 265U (a 15 W laptop chip, 14 threads),
   Intel built-in graphics, ~15 GB RAM.
 - **Be gentle on the laptop** (Dean asked): low priority, 4 render threads,
-  half-size EEVEE drafts, one render at a time. Ask before long or full-size
-  batches. `blender/ant_scene.py` defaults to this.
+  half-size EEVEE drafts, one render at a time (never a second Blender or a
+  compose alongside a render). Ask before long or full-size batches.
+  Renders rest 1 s after each frame (`--pause`, default 1.0) because the
+  265U's graphics and CPU share one small cooler, and EEVEE kept the fan
+  roaring (Dean, 22 Oct 2026). `blender/ant_scene.py` defaults to this.
 - Blender 4.5 LTS is the portable zip in
   `%LOCALAPPDATA%\Programs\Blender\blender-4.5.10-windows-x64\blender.exe`
   (the installer needs admin rights). ffmpeg 9 is installed via winget.

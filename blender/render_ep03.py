@@ -25,6 +25,8 @@ ap.add_argument("--scale", type=int, default=100)
 ap.add_argument("--every", type=int, default=1)
 ap.add_argument("--start", type=int, default=0)
 ap.add_argument("--end", type=int, default=0)
+ap.add_argument("--pause", type=float, default=1.0,
+                help="seconds to rest after each frame, so the laptop runs cooler (0 = flat out)")
 args = ap.parse_args(argv)
 S.gentle()
 
@@ -191,6 +193,7 @@ for f in range(end):
                           home=to_screen(hx + 0.5, hy + 0.5, 0.0), nest=to_screen(NEST[0] + 0.5, NEST[1] + 0.5, NEST[2]),
                           joe=to_screen(JOE[0], JOE[1], 1.2))
     sc.render(path)
+    if args.pause: time.sleep(args.pause)            # breathing room for the chip (and the fan)
     rendered += 1
     if rendered % 10 == 0: screen_path.write_text(json.dumps(SCREEN))
     if rendered % 30 == 0:

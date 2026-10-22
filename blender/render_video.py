@@ -30,6 +30,8 @@ ap.add_argument("--every", type=int, default=1, help="render every n-th frame (d
 ap.add_argument("--threads", type=int, default=4)
 ap.add_argument("--start", type=int, default=0)
 ap.add_argument("--end", type=int, default=0)
+ap.add_argument("--pause", type=float, default=1.0,
+                help="seconds to rest after each frame, so the laptop runs cooler (0 = flat out)")
 args = ap.parse_args(argv)
 S.gentle()
 
@@ -225,6 +227,7 @@ for f in range(end):
         save_labels(f)
         if rendered % 10 == 0: labels_path.write_text(json.dumps(LABELS))
     sc.render(path)
+    if args.pause: time.sleep(args.pause)            # breathing room for the chip (and the fan)
     rendered += 1
     if rendered % 20 == 0:
         el = time.time() - t_start

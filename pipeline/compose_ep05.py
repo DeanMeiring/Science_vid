@@ -16,6 +16,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import FPS, ROOT, ffmpeg
 from ep05_timeline import LEAD, Timeline
+import farm_overview as FO
 
 ap = argparse.ArgumentParser(); ap.add_argument("--draft", action="store_true"); args = ap.parse_args()
 tl = Timeline(ROOT / "episodes" / "ep05_crops.py")
@@ -125,6 +126,13 @@ def speed_text(f):
     s = tl.speed(f)
     return f"SPEED ×{int(round(s, -1 if s < 1000 else -2)):,}" if s > 4 else ""
 
+# ---------------- the whole farm at the end: a label above each experiment (see render_ep05) ----------------
+T_PULL = tl.t_next - 0.3
+LABELS = {5: ("Experiment #5", "today: a crop circle!"), 4: ("Experiment #4", "Joe & Daisy: spotless!"),
+          **{k: (FO.FIELDS[k]["title"], FO.FIELDS[k]["sub"]) for k in (1, 2, 3)}}
+NUDGE = {5: (-160, -40), 4: (200, -40)}     # #4 and #5 sit close together: their labels move apart, with an arrow each
+LABEL_T = {5: T_PULL + 0.5, 4: T_PULL + 1.0, 1: T_PULL + 1.3, 2: T_PULL + 1.9, 3: T_PULL + 2.5}
+
 # ---------------- video ----------------
 ff = subprocess.Popen([ffmpeg(), "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
                        "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "medium", "-crf", "19",
@@ -158,7 +166,7 @@ for f in range(tl.nf):
     a = pop(tt, RULES[0][3] - 0.2, tl.t_rules_end + 1.4, 0.3)
     if act >= 0 and a: comp(img, layer(("rules", act, q(a)), rules_fn(act, a)))
     # counters
-    if tt >= 0.5:
+    if 0.5 <= tt < T_PULL:
         st, spd = sp["step"] if f == base_f else int(tl.shown[f]), speed_text(f)
         mc = tl.mirror_count(st) if tt >= tl.t_reveal - 0.05 else None
         comp(img, layer(("cnt", st, spd, mc), lambda dr, st=st, spd=spd, mc=mc: (
@@ -171,6 +179,20 @@ for f in range(tl.nf):
         top = min(sp["axis"], key=lambda p: p[1]); big = tt >= tl.t_race_end
         comp(img, layer(("mir", int(top[0] / 8), int(top[1] / 8), q(a), big), lambda dr, top=top, a=a, big=big:
                         text(dr, (top[0], max(380, top[1] - 90)), "MIRROR!", MARK(130 if big else 104), al(GOLD, a), 8)))
+    # the whole farm
+    if "fields" in sp:
+        for k, t0 in LABEL_T.items():
+            a = pop(tt, t0, tl.duration + 1, 0.25)
+            fx, fy = sp["fields"][str(k)]
+            if not a: continue
+            dx, dy = NUDGE.get(k, (0, 0))
+            x = min(max(fx + dx, 215), W - 215); y = min(max(fy + dy, 290), 1450)
+            title, sub_ = LABELS[k]; today = k == 5
+            comp(img, layer(("lab", k, int(x / 6), int(y / 6), int(fx / 6), int(fy / 6), q(a)), lambda dr, x=x, y=y, fx=fx, fy=fy, a=a,
+                            title=title, sub_=sub_, today=today, k=k: (
+                arrow(dr, (x + (90 if fx > x else -90), y + 30), (fx, fy + 40), al(WHITE, a), 5) if k in NUDGE else None,
+                text(dr, (x, y - 62), title, MARK(58 if today else 50), al(GOLD if today else WHITE, a), 6),
+                text(dr, (x, y - 8), sub_, HAND(52), al(WHITE, a), 5))))
     # captions
     for t0, t1, c in spans:
         if t0 <= tt < t1:

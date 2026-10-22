@@ -35,7 +35,10 @@
   **Rendered 22 Oct** (`renders/ep05_crops/ep05_crops.mp4`, 40.0 s, 21.7 MB; full render 42 min).
   Dean picked style C: from above, looking down the mirror line, a glowing line + "MIRROR!" on
   each mirror moment; while racing only mirror moments are shown, so every frame is a true
-  mirror image. Pumpkins added to the farm theme (`scene.set_pumpkins`). Not posted yet.
+  mirror image. Pumpkins added to the farm theme (`scene.set_pumpkins`). Dean then asked for the
+  whole-farm zoom out at the end (as in Experiment 4): only the last 175 frames were re-rendered.
+  Experiment 4's spot shows Daisy. Not posted yet.
+  Lesson: word lookups match every occurrence ("next crop" before "Next experiment"); pass nth.
 - **Posted:** Experiments 1 and 2 on YouTube and Instagram. Dean posted
   Experiment 2's Reel from his phone (the API failed because it's over
   ~50 s): https://www.instagram.com/reel/DexWGACAEWc/

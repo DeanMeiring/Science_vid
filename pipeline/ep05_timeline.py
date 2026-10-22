@@ -35,7 +35,7 @@ class Timeline:
         self.t_rules_end, self.t_reveal = W("crop."), W("image!")
         self.t_1k, self.t_10k = W("mirror", 1), W("again.", 2)
         self.t_race, self.t_race_end = W("By"), W("times.")
-        self.t_circle, self.t_next = W("circle!"), W("Next")
+        self.t_circle, self.t_next = W("circle!"), W("Next", 1)       # not the "next" in "grows the next crop"
         k = [(0.2, 0, "lin"), (self.t_rules_end, 16, "exp"), (W("mess."), 150, "land"), (self.t_reveal, 500, "hold"),
              (W("thousand") - 0.1, 500, "land"), (self.t_1k, 1000, "hold"), (W("Ten"), 1000, "land"), (self.t_10k, 10012, "hold"),
              (self.t_race, 10012, "exp"), (self.t_race_end, END, "hold")]

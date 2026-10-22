@@ -70,6 +70,13 @@
   the longest *found* (don't call it the longest possible). Experiment 3 teased "four crops"
   next; this episode's last line keeps that promise for Experiment 5. Credit the commenter
   (handle needed from Dean) in the description.
+- **Experiment 4 rendered 22 Oct** (`renders/ep04_farmers/ep04_farmers.mp4`, 42.7 s; full
+  render 47 min). Dean's changes after the sample: no graph (round + SPEED counters instead),
+  Daisy the sheep as the helper (eats grass / leaves compost; Joe harvests / plants), and a
+  final zoom out over one farm with every experiment so far, labelled (`pipeline/farm_overview.py`).
+  Lesson: a flat image at z=0.02 vanishes into the floor from far away (lift it, z=0.4).
+  Lesson: Claude Code stops background jobs when the laptop runs low on memory; frames on disk
+  are kept, so a render resumes where it stopped.
 - Instagram insights (views, reach) need the `instagram_manage_insights`
   permission; not requested yet.
 

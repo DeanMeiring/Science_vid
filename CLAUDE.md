@@ -20,9 +20,11 @@
   don't import across repos.
 
 ## Where we left off (end of 21 Oct 2026)
-- **Posted:** Experiment 1 on YouTube + Instagram; Experiment 2 on YouTube
-  only. Instagram failed because it's over ~50 s (see the note below).
-  Dean may post it from his phone (`renders/ep02_wheat/ep02_wheat.mp4`).
+- **Posted:** Experiments 1 and 2 on YouTube and Instagram. Dean posted
+  Experiment 2's Reel from his phone (the API failed because it's over
+  ~50 s): https://www.instagram.com/reel/DexWGACAEWc/
+- **Stats on 22 Oct:** Instagram 17 and 20 likes, 3 followers. YouTube only
+  3 views each so far (a new channel; normal at first).
 - **GitHub:** PR #3 (`claude/voice-cartoon` → `main`, all the pipeline
   work) is open and waits for Dean to merge it (Claude Code blocks Claude
   from merging). `claude/episode-2` is stacked on top of it; its PR is #4.

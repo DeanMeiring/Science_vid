@@ -129,24 +129,35 @@ def caption_for(title: str, description: str) -> str:
 
 
 def publish_reel(token: dict, video_path: Path, caption: str, log=None, poll: float = 8.0,
-                 timeout: float = 900.0) -> dict:
+                 timeout: float = 900.0, publish: bool = True) -> dict:
     """Upload a local mp4 as a Reel and publish it. Returns {"media_id", "permalink"}.
     Blocks while Instagram processes the video (usually a minute or two)."""
     import requests
     log = log or (lambda *_: None)
     auth = {"Authorization": f"OAuth {token['access_token']}"}
     ig = token["ig_id"]
-    container = _check(requests.post(f"{FB_GRAPH}/{ig}/media", headers=auth, data={
-        "media_type": "REELS", "upload_type": "resumable", "caption": caption[:CAPTION_MAX],
-        "share_to_feed": "true"}, timeout=60))["id"]
-    log("container", container)
-    size = video_path.stat().st_size
-    with video_path.open("rb") as f:
-        up = requests.post(f"{RUPLOAD}/{container}", data=f, timeout=900,
-                           headers={**auth, "offset": "0", "file_size": str(size)})
-    if not _check(up).get("success"):
-        raise InstagramError(f"Instagram didn't accept the upload: {up.text[:300]}")
-    log("uploaded", size)
+    # The video goes up as one block with an exact length (streaming it from disk sometimes
+    # arrived as nothing: "File not found, 0 bytes"). A failed upload can leave the container
+    # stuck in an error state, so each retry starts a fresh container.
+    body = video_path.read_bytes(); size = len(body); err = ""
+    for attempt in range(3):
+        container = _check(requests.post(f"{FB_GRAPH}/{ig}/media", headers=auth, data={
+            "media_type": "REELS", "upload_type": "resumable", "caption": caption[:CAPTION_MAX],
+            "share_to_feed": "true"}, timeout=60))["id"]
+        log("container", container)
+        try:
+            up = requests.post(f"{RUPLOAD}/{container}", data=body, timeout=900, headers={
+                **auth, "offset": "0", "file_size": str(size), "Content-Type": "application/octet-stream"})
+            if up.ok and up.json().get("success"):
+                break
+            err = up.text[:300]
+        except (requests.RequestException, ValueError) as e:
+            err = str(e)
+        log(f"upload failed ({err}), trying again with a fresh container")
+        time.sleep(5 * (attempt + 1))
+    else:
+        raise InstagramError(f"Instagram didn't accept the upload: {err}")
+    log("uploaded", f"{size // 1048576} MB")
     deadline = time.time() + timeout
     while True:
         st = _check(requests.get(f"{FB_GRAPH}/{container}", headers=auth,
@@ -159,6 +170,8 @@ def publish_reel(token: dict, video_path: Path, caption: str, log=None, poll: fl
         if time.time() > deadline:
             raise InstagramError("Instagram took too long to process the video -- try again later.")
         time.sleep(poll)
+    if not publish:   # a test: uploaded and processed, but never shown (the container expires in 24 h)
+        return {"container": container, "status": "FINISHED"}
     media_id = _check(requests.post(f"{FB_GRAPH}/{ig}/media_publish", headers=auth,
                                     data={"creation_id": container}, timeout=60))["id"]
     permalink = None

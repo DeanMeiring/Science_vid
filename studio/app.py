@@ -41,8 +41,11 @@ def _read(path: Path, default):
 
 
 def _video(d: Path, name: str):
-    final, draft = d / f"{name}.mp4", d / f"{name}_draft.mp4"
-    return (final, False) if final.exists() else (draft, True) if draft.exists() else (None, None)
+    """The finished video, else the newest draft or draft clip (never postable)."""
+    final = d / f"{name}.mp4"
+    if final.exists(): return final, False
+    drafts = [p for p in (d / f"{name}_draft.mp4", d / f"{name}_draft_clip.mp4") if p.exists()]
+    return (max(drafts, key=lambda p: p.stat().st_mtime), True) if drafts else (None, None)
 
 
 @app.get("/", response_class=HTMLResponse)

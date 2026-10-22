@@ -3,7 +3,8 @@
 Used by blender/ant_scene.py (one still) and blender/render_video.py (a whole episode).
 Themes (same rules, different skin):
   ant   white squares and raised navy blocks; fresh flips glow pink (like prototypes/ant_3d.py)
-  farm  a little farmer on a grass field: grass is dug into dirt mounds, dirt grows back
+  farm  Farmer Joe on a grass field: grass is dug into dirt mounds, then (with 3 colours)
+        wheat grows on the dirt, and is harvested back to grass
 
 Camera as in the prototype: pitch 54 deg, yaw orbit, zoom in pixels per cell.
 Cells are points with attributes; geometry nodes put one bevelled block on each.
@@ -11,7 +12,7 @@ Cells are points with attributes; geometry nodes put one bevelled block on each.
 import ctypes, math, sys
 import numpy as np
 import bpy, bmesh
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 W, H = 1080, 1920
 PITCH = math.radians(54)
@@ -29,16 +30,25 @@ THEMES = {
     # floor: "white" squares; block: "black" squares; *_fresh: just flipped
     "ant": dict(floor=(240, 242, 249), floor_fresh=(255, 70, 160), line=(150, 158, 185), line_k=0.22,
                 block=(30, 34, 62), block_fresh=(255, 70, 160), block_h=0.42, emit=0.6,
-                world=(214, 220, 236), sun=2.0, sun_col=(255, 255, 255), dot=(255, 150, 40)),
+                world=(214, 220, 236), sun=2.0, sun_col=(255, 255, 255), dot=(255, 150, 40),
+                crops=[((30, 34, 62), (255, 70, 160), 0.42)]),
     "farm": dict(floor=(104, 170, 62), floor_fresh=(196, 236, 90), line=(70, 128, 40), line_k=0.35,
                  block=(120, 80, 48), block_fresh=(84, 52, 30), block_h=0.14, emit=0.0,
-                 world=(178, 210, 240), sun=2.6, sun_col=(255, 244, 222), dot=(255, 214, 64)),
+                 world=(178, 210, 240), sun=2.6, sun_col=(255, 244, 222), dot=(255, 214, 64),
+                 # colour 1, 2, ...: (colour, fresh colour, height); colour 0 is the grass floor
+                 crops=[((120, 80, 48), (84, 52, 30), 0.14), ((222, 178, 70), (255, 222, 120), 0.26)]),
 }
 
 def gentle():
     """Below-normal process priority, so the laptop stays usable while rendering."""
     if sys.platform == "win32":
-        ctypes.windll.kernel32.SetPriorityClass(ctypes.windll.kernel32.GetCurrentProcess(), 0x4000)
+        k32 = ctypes.windll.kernel32
+        # handles are pointer-sized: without these types the handle gets cut to 32 bits and the
+        # call silently fails (renders ran at normal priority until Oct 2026)
+        k32.GetCurrentProcess.restype = ctypes.c_void_p
+        k32.SetPriorityClass.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+        if not k32.SetPriorityClass(k32.GetCurrentProcess(), 0x4000):   # BELOW_NORMAL_PRIORITY_CLASS
+            print("warning: couldn't lower the process priority", flush=True)
 
 def _node(nt, kind, **ops):
     n = nt.nodes.new(kind)
@@ -95,6 +105,7 @@ def _points_mesh(name, pts, attrs):
 class Scene:
     def __init__(self, theme="farm", scale=50, threads=4, engine="eevee", samples=0):
         self.theme = theme; self.T = T = THEMES[theme]; self.HB = T["block_h"]
+        self.heights = [0.0] + [c[2] for c in T["crops"]]    # block height per colour
         bpy.ops.wm.read_factory_settings(use_empty=True)
         sc = self.sc = bpy.context.scene
         sc.render.resolution_x, sc.render.resolution_y = W, H
@@ -190,7 +201,24 @@ class Scene:
             bump = _node(nt, "ShaderNodeBump"); bump.inputs["Strength"].default_value = 0.9
             nt.links.new(wave.outputs["Fac"], bump.inputs["Height"]); nt.links.new(bump.outputs["Normal"], bb.inputs["Normal"])
         flo_col = _mix(nt, a_heat.outputs["Fac"], lin(T["floor"]), lin(T["floor_fresh"]))
-        nt.links.new(_mix(nt, a_blk.outputs["Fac"], flo_col, blk_col), bb.inputs["Base Color"])
+        # "block" holds the colour number: 0 floor tile, 1 first block colour, 2 second (wheat)...
+        is1 = _node(nt, "ShaderNodeMath", operation="GREATER_THAN"); is1.inputs[1].default_value = 0.5
+        nt.links.new(a_blk.outputs["Fac"], is1.inputs[0])
+        col = _mix(nt, is1.outputs[0], flo_col, blk_col)
+        for i, (c, fresh, _h) in enumerate(T["crops"][1:], start=2):
+            ci = _mix(nt, a_heat.outputs["Fac"], lin(c), lin(fresh))
+            if farm:   # wheat: fine golden streaks
+                tcw = _node(nt, "ShaderNodeTexCoord")
+                ww = _node(nt, "ShaderNodeTexWave", wave_type="BANDS", bands_direction="Y")
+                ww.inputs["Scale"].default_value = 9; ww.inputs["Distortion"].default_value = 3
+                nt.links.new(tcw.outputs["Object"], ww.inputs["Vector"])
+                st = _node(nt, "ShaderNodeMath", operation="MULTIPLY"); st.inputs[1].default_value = 0.35
+                nt.links.new(ww.outputs["Fac"], st.inputs[0])
+                ci = _mix(nt, st.outputs[0], ci, lin((176, 128, 40)))
+            isi = _node(nt, "ShaderNodeMath", operation="GREATER_THAN"); isi.inputs[1].default_value = i - 0.5
+            nt.links.new(a_blk.outputs["Fac"], isi.inputs[0])
+            col = _mix(nt, isi.outputs[0], col, ci)
+        nt.links.new(col, bb.inputs["Base Color"])
         if T["emit"]:
             bb.inputs["Emission Color"].default_value = lin(T["block_fresh"])
             em = _node(nt, "ShaderNodeMath", operation="MULTIPLY"); em.inputs[1].default_value = T["emit"]
@@ -220,6 +248,23 @@ class Scene:
         self.tufts = bpy.data.objects.new("Tufts", _points_mesh("Tufts", [], {}))
         self.sc.collection.objects.link(self.tufts)
         self.tufts.modifiers.new("Inst", "NODES").node_group = _instancer_nodes("Tufts", tuft)
+        # wheat: a thin stalk with an ear on top
+        bm = bmesh.new()
+        bmesh.ops.create_cone(bm, cap_ends=False, segments=6, radius1=0.008, radius2=0.006, depth=0.22,
+                              matrix=Matrix.Translation((0, 0, 0.11)))
+        bmesh.ops.create_uvsphere(bm, u_segments=8, v_segments=6, radius=0.024,
+                                  matrix=Matrix.Translation((0, 0, 0.25)) @ Matrix.Diagonal((0.75, 0.75, 2.3, 1)))
+        sme = bpy.data.meshes.new("Stalk"); bm.to_mesh(sme); bm.free()
+        stalk = bpy.data.objects.new("Stalk", sme); self.sc.collection.objects.link(stalk)
+        stalk.hide_render = True; stalk.hide_viewport = True
+        wm, wb = _material("WheatStalk", lin((226, 182, 76)), rough=0.6)
+        oinf2 = _node(wm.node_tree, "ShaderNodeObjectInfo")
+        wm.node_tree.links.new(_mix(wm.node_tree, oinf2.outputs["Random"], lin((214, 164, 60)), lin((246, 210, 110))),
+                               wb.inputs["Base Color"])
+        sme.materials.append(wm)
+        self.stalks = bpy.data.objects.new("Stalks", _points_mesh("Stalks", [], {}))
+        self.sc.collection.objects.link(self.stalks)
+        self.stalks.modifiers.new("Inst", "NODES").node_group = _instancer_nodes("Stalks", stalk)
 
     def _walker(self):
         self.root = bpy.data.objects.new("Walker", None); self.sc.collection.objects.link(self.root)
@@ -239,7 +284,7 @@ class Scene:
             a, b = Vector(a), Vector(b); v = b - a
             return part("cylinder", (a + b) / 2, m=m, rot=v.to_track_quat("Z", "Y").to_euler(),
                         radius=r, depth=v.length, vertices=verts, parent=parent)
-        self.legs = []
+        self.legs = []; self.hat = None
         if self.theme == "ant":
             am = mat("Ant", (52, 28, 14), 0.3)
             for o_, r, z in ((-0.3, 0.17, 0.16), (0.0, 0.11, 0.15), (0.24, 0.13, 0.16)):
@@ -269,11 +314,20 @@ class Scene:
                 part("uv_sphere", hand, m=skin, radius=0.035, segments=12, ring_count=6)
             part("uv_sphere", (0.01, 0, 0.56), m=skin, radius=0.11, segments=24, ring_count=12)   # head
             part("uv_sphere", (0.115, 0, 0.55), m=skin, radius=0.025, segments=12, ring_count=6)  # nose
+            # the face from his profile picture: big shiny eyes, rosy cheeks, a moustache
+            white = _material("EyeShine", lin((255, 255, 255)), emit=(lin((255, 255, 255)), 2.0))[0]
+            cheek = mat("Cheek", (240, 120, 120)); tache = mat("Moustache", (110, 72, 44), 0.9)
             for side in (-1, 1):
-                part("uv_sphere", (0.095, side * 0.04, 0.585), m=eye, radius=0.014, segments=10, ring_count=6)
-            part("cylinder", (0, 0, 0.63), m=straw, radius=0.2, depth=0.02, vertices=32)          # hat brim
-            part("cylinder", (0, 0, 0.68), m=straw, radius=0.1, depth=0.09, vertices=24)          # hat crown
-            part("cylinder", (0, 0, 0.655), m=band, radius=0.102, depth=0.025, vertices=24)
+                part("uv_sphere", (0.098, side * 0.042, 0.592), m=eye, radius=0.021, segments=16, ring_count=8)
+                part("uv_sphere", (0.115, side * 0.036, 0.6), m=white, radius=0.006, segments=8, ring_count=6)
+                part("uv_sphere", (0.085, side * 0.072, 0.538), (0.6, 1, 0.8), cheek, radius=0.026, segments=12, ring_count=8)
+                part("uv_sphere", (0.112, side * 0.03, 0.528), (0.55, 1.35, 0.55), tache, radius=0.03, segments=12, ring_count=8)
+            # his little hat, on its own so it can fly off (it follows the body unless told otherwise)
+            self.hat = bpy.data.objects.new("Hat", None); self.sc.collection.objects.link(self.hat)
+            self.hat.parent = self.root; self.hat.scale = self.body.scale
+            part("cylinder", (0, 0, 0.63), m=straw, radius=0.2, depth=0.02, vertices=32, parent=self.hat)    # brim
+            part("cylinder", (0, 0, 0.68), m=straw, radius=0.1, depth=0.09, vertices=24, parent=self.hat)    # crown
+            part("cylinder", (0, 0, 0.655), m=band, radius=0.102, depth=0.025, vertices=24, parent=self.hat)
             stick((0.1, 0.14, 0.45), (0.4, 0.14, 0.02), 0.014, wood)                              # hoe
             part("cube", (0.41, 0.14, 0.03), (0.02, 0.06, 0.035), metal)
         # far away: a glowing dot instead
@@ -291,25 +345,31 @@ class Scene:
         self.cam = bpy.data.objects.new("Cam", cd); self.sc.collection.objects.link(self.cam); self.sc.camera = self.cam
 
     # ---------- per frame ----------
-    def set_cells(self, xs, ys, height, heat, is_blk):
-        """One point per visible cell: height 0..1 of the block, heat 0..1, is_blk 0/1."""
+    def set_cells(self, xs, ys, hz, heat, kind):
+        """One point per visible cell: hz block height in cells (0 = flat floor tile), heat 0..1,
+        kind = colour number (0 floor tile, 1 dirt, 2 wheat, ...)."""
         n = len(xs)
         pts = np.stack([xs + 0.5, -(ys + 0.5), np.zeros(n)], -1)
-        hz = np.where(is_blk > 0, np.maximum(height, 0.02) * self.HB, 0.006)
+        hz = np.where(np.asarray(kind) > 0, np.maximum(hz, 0.008), 0.006)
         scl = np.stack([np.ones(n), np.ones(n), hz], -1)
         old = self.cells.data
-        self.cells.data = _points_mesh("Cells", pts, dict(scale=scl, rot=np.zeros((n, 3)), heat=heat, block=is_blk))
+        self.cells.data = _points_mesh("Cells", pts, dict(scale=scl, rot=np.zeros((n, 3)), heat=heat,
+                                                         block=np.asarray(kind, np.float32)))
         bpy.data.meshes.remove(old)
 
-    def set_tufts(self, grid, cx, cy, s_px, per=8):
-        """Grass tufts on grass squares around the camera, only while zoomed in enough to see them."""
+    def set_tufts(self, grid, cx, cy, s_px, per=8, hz=None):
+        """Grass tufts on grass squares and wheat stalks on wheat squares around the camera, only
+        while zoomed in enough to see them. hz: block height per cell (for the stalks to stand on)."""
         if self.theme != "farm": return
         show = s_px > 30
-        self.tufts.hide_render = not show
+        self.tufts.hide_render = self.stalks.hide_render = not show
         if not show: return
         R = int(1.3 * max(W, H) / s_px) + 2
         gx, gy = np.meshgrid(np.arange(int(cx) - R, int(cx) + R), np.arange(int(cy) - R, int(cy) + R))
         gx, gy = gx.ravel(), gy.ravel()
+        wheat = grid[gy, gx] == 2
+        self._stalks(gx[wheat], gy[wheat], hz[gy[wheat], gx[wheat]] if hz is not None
+                     else np.full(int(wheat.sum()), self.heights[-1]))
         keep = grid[gy, gx] == 0
         gx, gy = gx[keep], gy[keep]
         # the same tufts on the same square every frame (hash of the cell, not a fresh random draw)
@@ -324,22 +384,44 @@ class Scene:
                                        dict(scale=np.stack([s, s, sz], -1), rot=rot))
         bpy.data.meshes.remove(old)
 
+    def _stalks(self, gx, gy, z, per=7):
+        k = np.arange(per)
+        h = lambda s: (np.sin((gx[:, None] * 12.9898 + gy[:, None] * 78.233 + k[None, :] * 37.719 + s) * 1.7) * 43758.5453) % 1.0
+        tx = (gx[:, None] + 0.14 + 0.72 * h(0.4)).ravel(); ty = (gy[:, None] + 0.14 + 0.72 * h(1.9)).ravel()
+        tz = np.repeat(np.asarray(z, float), per)
+        sc_ = (0.8 + 0.5 * h(2.7)).ravel(); m = tx.size
+        rot = np.stack([(h(4.6).ravel() - 0.5) * 0.4, (h(5.1).ravel() - 0.5) * 0.4, h(6.8).ravel() * 2 * math.pi], -1)
+        old = self.stalks.data
+        self.stalks.data = _points_mesh("Stalks", np.stack([tx, -ty, tz], -1),
+                                        dict(scale=np.stack([sc_, sc_, sc_], -1), rot=rot))
+        bpy.data.meshes.remove(old)
+
     def set_floor(self, s_px):
         self._line_fade.default_value = self.T["line_k"] * min(1.0, max(0.0, (s_px - 9) / 18))
         for sock in self._line_w: sock.default_value = 0.025 * max(1.0, 30 / s_px)
 
-    def set_walker(self, x, y, z, ang, s_px, walk=0.0):
-        """x, y in cells (centre of the square = +0.5); walk 0..1 = progress of the current step."""
+    def set_walker(self, x, y, z, ang, s_px, walk=0.0, fall=0.0, hat=None):
+        """x, y in cells (centre of the square = +0.5); walk 0..1 = progress of the current step.
+        fall 0..1: tipped forward onto his face (1 = flat). hat: None = on his head, or
+        ((x, y, z), (rx, ry, rz)) in his own frame (x forward) when it has come off."""
         self.root.location = (x, -y, z); self.root.rotation_euler = (0, 0, ang)
         far = s_px <= 16
         self.dot.hide_render = not far
         self.dot.scale = (7 / s_px,) * 3
         for o in self.body.children_recursive: o.hide_render = far
+        if self.hat:
+            for o in self.hat.children_recursive: o.hide_render = far
         # a little walk cycle: legs swing and the body bobs while moving between squares
         sw = math.sin(walk * math.pi * 2) * (1 - walk) * 0.5
         for i, hip in enumerate(self.legs):
             hip.rotation_euler = (0, sw * (1 if i else -1), 0)
         self.body.location = (0, 0, abs(math.sin(walk * math.pi)) * 0.04 * (1 - walk))
+        self.body.rotation_euler = (0, fall * math.radians(84), 0)   # pivots at his feet, face first
+        if self.hat:
+            if hat is None:
+                self.hat.location = self.body.location; self.hat.rotation_euler = self.body.rotation_euler
+            else:
+                self.hat.location, self.hat.rotation_euler = hat
         self.glow.data.energy = 6.0 * max(1, 30 / s_px) ** 2
 
     def set_camera(self, cx, cy, s_px, yaw_deg):

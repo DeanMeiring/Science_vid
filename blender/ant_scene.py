@@ -20,6 +20,7 @@ argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 ap = argparse.ArgumentParser()
 ap.add_argument("--step", type=int, default=12)
 ap.add_argument("--theme", choices=list(S.THEMES), default="farm")
+ap.add_argument("--rule", default="RL", help="turn per colour, e.g. RL (Episode 1) or RLR (Episode 2)")
 ap.add_argument("--engine", choices=["eevee", "cycles"], default="eevee")
 ap.add_argument("--samples", type=int, default=0, help="0 = engine default (eevee 16, cycles 32)")
 ap.add_argument("--scale", type=int, default=50, help="resolution %% (100 = 1080x1920)")
@@ -32,10 +33,10 @@ ap.add_argument("--save", default="", help="also save the .blend here")
 args = ap.parse_args(argv)
 S.gentle()
 
-moves, hist = simulate(args.step)
+moves, hist = simulate(args.step, args.rule)
 grid = np.zeros((N, N), np.uint8); last = np.full((N, N), -10 ** 9, np.int64)
 for s, (px, py) in enumerate(moves):
-    grid[py, px] ^= 1; last[py, px] = s
+    grid[py, px] = (grid[py, px] + 1) % len(args.rule); last[py, px] = s
 x, y, d, _ = hist[args.step]
 touched = last > -10 ** 9
 if touched.any():
@@ -50,16 +51,16 @@ heat_len = args.heat_len or (1.2 if args.step < 30 else 26.0 if args.step > 9977
 
 sc = S.Scene(args.theme, scale=args.scale, threads=args.threads, engine=args.engine, samples=args.samples)
 heat = np.exp(-(args.step - last) / heat_len) * 0.8
-ys, xs = np.nonzero((grid == 1) | (touched & (heat > 0.05)))
-blk = grid[ys, xs].astype(np.float32)
-sc.set_cells(xs, ys, np.ones(len(xs)), heat[ys, xs], blk)
+ys, xs = np.nonzero((grid > 0) | (touched & (heat > 0.05)))
+kind = grid[ys, xs]
+sc.set_cells(xs, ys, np.array(sc.heights)[kind], heat[ys, xs], kind)
 sc.set_tufts(grid, cx, cy, s_px)
 sc.set_floor(s_px)
 ANGS = [math.pi / 2, 0, -math.pi / 2, math.pi]
-sc.set_walker(x + 0.5, y + 0.5, sc.HB if grid[y, x] == 1 else 0.0, ANGS[d], s_px)
+sc.set_walker(x + 0.5, y + 0.5, sc.heights[grid[y, x]], ANGS[d], s_px)
 sc.set_camera(cx, cy, s_px, args.yaw)
 
-out = args.out or str(ROOT / "renders" / f"{args.theme}_{args.engine}_step{args.step}_{args.scale}.png")
+out = args.out or str(ROOT / "renders" / f"{args.theme}_{args.rule}_step{args.step}_{args.scale}.png")
 Path(out).parent.mkdir(parents=True, exist_ok=True)
 if args.save:
     import bpy

@@ -34,7 +34,7 @@ def schedule(lines, nf):
         for f in range(f0, min(f1, nf)):
             u = (f - f0) / max(1, f1 - f0 - 1)
             m = ln["mode"]
-            if m == "hold": v = s0
+            if m in ("hold", "trip"): v = s0
             elif m == "single": v = s0 + min(s1 - s0, int(u * (s1 - s0) + 0.999))
             elif m == "ramp": v = s0 + (s1 - s0) * (math.expm1(u * 3) / math.expm1(3))
             elif m == "land": v = s0 + (s1 - s0) * (1 - (1 - u) ** 3)      # brakes into the moment
@@ -45,19 +45,26 @@ def schedule(lines, nf):
     sched[:int(lines[0]["t0"] * FPS)] = 0
     return np.maximum.accumulate(sched)
 
-def simulate(total):
-    """Run the rule for `total` steps. Returns moves (cell flipped at each step) and hist
+def simulate(total, rule="RL"):
+    """Run the rule for `total` steps. rule: one letter per colour, the turn on it ("RL" is
+    Langton's ant: right on white/grass, left on black/dirt); each square the walker leaves
+    moves on to the next colour. Returns moves (cell changed at each step) and hist
     (x, y, dir, colour under the walker) after each step."""
-    grid = np.zeros((N, N), np.uint8)
+    k = len(rule); turn = [1 if c == "R" else -1 for c in rule]
+    grid = [[0] * N for _ in range(N)]          # plain lists: much faster than numpy per cell
     x = y = N // 2; d = 0
     moves = np.zeros((total, 2), np.int64)
     hist = np.zeros((total + 1, 4), np.int64); hist[0] = (x, y, d, 0)
+    mv = moves.tolist(); hs = hist.tolist()
     for s in range(total):
-        d = (d + 1) % 4 if grid[y, x] == 0 else (d - 1) % 4   # white/grass: right, black/dirt: left
-        grid[y, x] ^= 1; moves[s] = (x, y)
+        row = grid[y]; c = row[x]
+        d = (d + turn[c]) % 4
+        row[x] = (c + 1) % k; mv[s] = (x, y)
         x += DX[d]; y += DY[d]
-        hist[s + 1] = (x, y, d, grid[y, x])
-    return moves, hist
+        if not (0 < x < N - 1 and 0 < y < N - 1):
+            raise RuntimeError(f"walked off the {N}x{N} grid at step {s}; make N bigger")
+        hs[s + 1] = (x, y, d, grid[y][x])
+    return np.array(mv, np.int64).reshape(-1, 2), np.array(hs, np.int64)
 
 def load_timeline(episode_dir):
     """timing.json -> (lines, duration, frame count, step schedule)."""

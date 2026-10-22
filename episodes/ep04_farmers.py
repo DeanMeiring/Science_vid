@@ -46,14 +46,14 @@ NARRATION = [
     ("next",   "Thanks for the idea! The farm's getting busy. Next experiment: four crops. See y'all next harvest!", None),
 ]
 
-TITLE = "Two farmers make a mess... then clean it up perfectly?!"
+TITLE = "Farmer Joe and his sheep make a mess... then clean it up perfectly?!"
 DESCRIPTION = """Experiment #4: Farmer Joe gets a helper. A viewer's idea!
 
-Joe and Daisy the sheep follow the same simple rule from Experiment #1. On grass, turn right (Daisy eats it, Joe harvests it). On bare dirt, turn left and it grows back (Daisy leaves compost, Joe plants). They take turns. After 1,181 rounds of chaos they meet, and each one walks back along the other's path, undoing every square. At round 2,362 the field is spotless, then it all happens again upside down, and at round 4,724 both farmers are exactly back where they started. Forever.
+Joe and Daisy the sheep follow the same simple rule from Experiment #1. On grass, turn right (Daisy eats it, Joe harvests it). On bare dirt, turn left and it grows back (Daisy leaves compost, Joe plants). They take turns. After 1,181 rounds of chaos they meet, and each one walks back along the other's path, undoing every square. At round 2,362 the field is spotless, then it all happens again upside down, and at round 4,724 Joe and Daisy are both exactly back where they started. Forever.
 
 We simulated 1,280 different starting positions: about four in ten come back like this. 4,724 rounds was the longest we found.
 
-Idea by [commenter], thank you!
+Idea from a viewer, thank you!
 
 Next experiment: four crops.
 

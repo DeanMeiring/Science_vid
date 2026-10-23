@@ -76,6 +76,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .go { border: 0; color: #fff; padding: 13px 14px; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .go.yt { background: var(--yt); }
 .go.ig { background: var(--ig); }
+.go.dl { grid-column: 1 / -1; background: var(--ink); color: var(--panel); }
 .go.both { grid-column: 1 / -1; background: linear-gradient(90deg, var(--yt), #e91e63 60%, #7b1fa2); font-size: 16px; padding: 15px 14px; }
 .ghost { background: none; }
 .posted { display: grid; gap: 8px; margin-top: 14px; }
@@ -134,6 +135,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
           <button class="go both" id="post-both">⇪ Post to both</button>
           <button class="go yt" id="post-yt">▶ Post to YouTube</button>
           <button class="go ig" id="post-ig">◎ Post to Instagram</button>
+          <button class="go dl" id="download">⬇ Download video (for TikTok)</button>
         </div>
         <div class="posted" id="posted"></div>
         <div class="log" id="log"></div>
@@ -220,6 +222,8 @@ function buttons() {
   $('post-ig').disabled = busy || !ready || !S.instagram.connected;
   $('post-yt').title = !ready ? 'Wait for the full-size video' : !S.youtube.connected ? 'Connect YouTube first' : '';
   $('post-ig').title = !ready ? 'Wait for the full-size video' : !S.instagram.connected ? 'Connect Instagram first' : '';
+  $('download').disabled = !ready;
+  $('download').title = ready ? 'Save the mp4, e.g. to post on TikTok from your phone' : 'Wait for the full-size video';
 }
 
 async function load(refresh = false) {
@@ -284,6 +288,7 @@ $('privacy').onclick = e => { const b = e.target.closest('button'); if (!b) retu
   privacy = b.dataset.v; [...$('privacy').children].forEach(x => x.classList.toggle('sel', x === b));
   $('sched-box').style.display = privacy === 'schedule' ? 'block' : 'none'; };
 $('post-both').onclick = () => post(['youtube', 'instagram']);
+$('download').onclick = () => { if (cur) window.location.href = '/download/' + encodeURIComponent(cur.name); };
 $('post-yt').onclick = () => post(['youtube']);
 $('post-ig').onclick = () => post(['instagram']);
 const q = new URLSearchParams(location.search);

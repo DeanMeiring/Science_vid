@@ -82,6 +82,15 @@ def video(name: str):
     return FileResponse(v, media_type="video/mp4")
 
 
+@app.get("/download/{name}")
+def download(name: str):
+    """The finished video as a file download (for posting by hand, e.g. to TikTok from the phone)."""
+    _, _, d = _episode(name)
+    v, draft = _video(d, name)
+    if not v or draft: raise HTTPException(404, "the full-size video isn't rendered yet")
+    return FileResponse(v, media_type="video/mp4", filename=f"farmer-joe-{name}.mp4")
+
+
 class Draft(BaseModel):
     title: str
     description: str

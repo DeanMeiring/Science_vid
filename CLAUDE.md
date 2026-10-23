@@ -36,7 +36,8 @@
   **Rendered 23 Oct** (`renders/ep06_barns/ep06_barns.mp4`, 42.9 s, 26 MB; full render 48 min).
   New 3D props in `blender/barns_props.py`: barns whose doors swing open, a goat, Joe's tractor
   (also instanced as little tractor "wins"). Behind the doors: goat, tractor, goat. Letters rain
-  down on "1990". Ends on the whole farm with all six experiments labelled. Not posted yet.
+  down on "1990". Ends on the whole farm with all six experiments labelled. **Posted 2026-10-23 10:20** to both:
+  YouTube https://youtube.com/shorts/hW9eZ_L_Smg and Instagram https://www.instagram.com/reel/De1Hdj2nVY7/
 - **Experiment 5 posted 22 Oct 2026, 22:52** to both from the studio: YouTube
   https://youtube.com/shorts/TKMkmPbBdc8 and Instagram https://www.instagram.com/reel/Dez4ouTlgJu/
 - Branches `claude/episode-3`, `claude/episode-4-farmers`, `claude/episode-5-crops` are pushed,

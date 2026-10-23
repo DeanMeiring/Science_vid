@@ -30,11 +30,14 @@ from mathutils import Vector
 
 c = N // 2
 sc = S.Scene("farm", scale=args.scale)
+daisy = sc.add_character("sheep")
 sc.set_sky((120, 182, 242))
-FX0, FY0, FW, FH = c - 40, c - 30, 80, 60                      # the floor: 80 squares x 60 planks
-HP.add_floor(sc, FX0, FY0, FW, FH)
+FX0, FY0, FW, FH = c - 20, c - 14, 40, 28                      # the barn floor: 40 squares x 28 planks
+HP.add_floor(sc, FX0, FY0, FW, FH); HP.add_barn_walls(sc, FX0, FY0, FW, FH)
 JX, JY = c + 0.5, c + 2.5                                       # Joe, with the bale beside him
 HP.add_bale(sc, c + 2, c + 2, facing=0.3)
+HP.add_square_bales(sc, c + 3, c - 1.5); HP.add_pitchfork(sc, c + 5.3, c - 1.1, lean=0.3, facing=0.4)
+HP.add_bucket(sc, c - 1.6, c + 3.4); HP.add_lantern(sc, c - 3, c - 1.2)
 straws = HP.Straws(sc)
 d = HY.drop(1, 100000)
 GOLD, PALE = np.array(S.lin((255, 196, 52)))[:3], np.array(S.lin((250, 240, 205)))[:3]
@@ -44,15 +47,18 @@ def screen(gx, gy, z=0.0):
 
 n, area = {"close": (7, (c - 3, c - 2, 6, 4)), "many": (2000, (c - 8, c - 6, 16, 12)), "carpet": (100000, (FX0, FY0, FW, FH))}[args.shot]
 x, y, ang, cross = HY.spread(d, 0, n, *area)
-z = np.full(n, HP.FLOOR_Z + 0.017)
+z = np.full(n, HP.FLOOR_Z)
 tilt = spin = None
 if args.shot == "close":                                         # the last one is still falling
     z[-1] = 1.1; tilt = np.zeros(n); tilt[-1] = 0.7; spin = np.zeros(n); spin[-1] = 0.4
-rgb = np.where(cross[:, None], GOLD, PALE); glow = np.where(cross, 0.8, 0.15)
+tone = 0.86 + 0.14 * np.random.default_rng(3).random(n)[:, None]       # every straw a slightly different shade
+rgb = np.where(cross[:, None], GOLD, PALE) * tone; glow = np.where(cross, 0.9, 0.3)
 straws.set(x, y, z, ang, rgb, glow, tilt, spin)
-s_px, pitch, cy = {"close": (150.0, 52.0, c + 0.6), "many": (48.0, 50.0, c), "carpet": (11.0, 58.0, c - 2)}[args.shot]
+s_px, pitch, cy = {"close": (120.0, 50.0, c + 0.8), "many": (48.0, 48.0, c), "carpet": (19.0, 50.0, c - 1)}[args.shot]
 sc.set_walker(JX, JY, HP.FLOOR_Z, math.radians(110), s_px)
+sc.set_character(daisy, c - 1.6, c + 1.2, HP.FLOOR_Z, math.radians(-20), s_px)
 sc.set_tufts(np.ones((N, N), np.uint8), c, cy, s_px); sc.set_floor(s_px)
+sc.set_pumpkins(np.zeros((N, N), np.uint8), c, cy, s_px)
 sc.set_camera(c + 0.5, cy, s_px, -8, pitch)
 bpy.context.view_layer.update()
 info = dict(n=n, cross=int(cross.sum()), joe=screen(JX, JY, 1.2),

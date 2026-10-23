@@ -1,7 +1,8 @@
 """Live demo of Experiment 7 (Dean, 23 Oct): from the side, close to Joe, with the farm backdrop.
-Joe throws straws in different ways -- an underarm toss, an overhead fling, a spin-throw, a forkful
-with the pitchfork, two-handed showers -- each straw flies in an arc, tumbles, lands on the planks
-and flashes gold if it lies across a crack. Then it speeds up: counted straws go onto the heap
+Joe reaches into the bale, turns, and throws: an underarm toss (arm back, then forward and up), an
+overhead fling (arm wound up behind his head), a spin-throw, a forkful with the pitchfork, two-handed
+showers. Each straw leaves his actual hand, flies in an arc, tumbles, lands on the planks and flashes
+gold if it lies across a crack. (Dean: no labels for the throws; natural arm movement.) Then it speeds up: counted straws go onto the heap
 behind, which grows, and Joe backs away from it (glancing over his shoulder).
 
 Usage: blender -b -P blender/hay_demo.py -- [--seconds 15] [--scale 50] [--pause 1.0]
@@ -35,7 +36,7 @@ def lerp(a, b, u): return a + (b - a) * u
 
 # ---------------- the yard ----------------
 sc = S.Scene("farm", scale=args.scale)
-SC.add_backdrop(sc, c, c - 3, yard=(c - 16, c - 22, c + 14, c + 8)); SC.add_silo(sc, c - 17, c - 8)
+SC.add_backdrop(sc, c, c - 3, yard=(c - 16, c - 22, c + 14, c + 8), use_kenney=True); SC.add_silo(sc, c - 17, c - 8)
 daisy = sc.add_character("sheep")
 HP.add_floor(sc, c - 8, c - 4, 16, 10)
 sc.add_barn(c - 13, c - 3, facing=-math.pi / 3)
@@ -52,36 +53,76 @@ grid = np.zeros((N, N), np.uint8); grid[c - 4:c + 6, c - 8:c + 8] = 1
 # ---------------- the throws ----------------
 # (start time, kind, straws in it). Each straw flies 0.75 s from Joe's hand to where the simulation
 # put it (its angle and its place across its plank are the simulation's; see pipeline/hay.spread).
-THROWS = [(0.5, "underarm", 1), (2.7, "overhead", 1), (4.9, "spin", 1), (6.9, "fork", 7), (8.7, "shower", 14)]
+THROWS = [(0.4, "underarm", 1), (2.6, "overhead", 1), (4.8, "spin", 1), (6.8, "fork", 7), (8.6, "shower", 14)]
+RELEASE = {"underarm": 0.6 + 0.9 * 0.55, "overhead": 0.6 + 0.9 * 0.5, "spin": 0.6 + 0.9 * 0.55, "fork": 0.6 + 0.9 * 0.55,
+           "shower": 0.6 + 0.9 * 0.5}                           # seconds after the throw starts that the straws leave
 FAST0, FAST1, NFAST = 10.0, args.seconds - 0.5, 20000         # then pouring: up to 20,000 straws
+FLY = 0.75
 d = HY.drop(1, 100000)
-t_of, kind_of = [], []
+t_rel = []
 for t0, kind, k in THROWS:
-    for i in range(k): t_of.append(t0 + 0.32 + i * (0.04 if kind in ("fork", "shower") else 0)); kind_of.append(kind)
-n_slow = len(t_of)
+    for i in range(k): t_rel.append(t0 + RELEASE[kind] + i * (0.04 if kind in ("fork", "shower") else 0))
+n_slow = len(t_rel)
 fast_t = FAST0 + (FAST1 - FAST0) * (np.arange(NFAST - n_slow) / (NFAST - n_slow)) ** 2.2   # faster and faster
-T_LAND = np.r_[np.array(t_of) + 0.75, fast_t + 0.75]
+T_REL = np.r_[np.array(t_rel), fast_t]; T_LAND = T_REL + FLY
 NTOT = len(T_LAND)
-X, Y, ANG, CROSS = HY.spread(d, 0, NTOT, c - 4, c + 1, 9, 4)
-HAND_AT = lambda jx, jy: (jx + 0.3, jy + 0.1, 1.0)
+LAND = (c - 2.5, c + 3, 5, 2)                                   # where they land: in front of Joe, in view of the camera
+X, Y, ANG, CROSS = HY.spread(d, 0, NTOT, *LAND)
+REL_AT = {}                                                     # where each straw left Joe's hand (filled as we go)
 GOLD, PALE = np.array(S.lin((255, 196, 52)))[:3], np.array(S.lin((250, 240, 205)))[:3]
 TONE = 0.86 + 0.14 * np.random.default_rng(3).random(NTOT)[:, None]
 SPIN = np.random.default_rng(5).uniform(-9, 9, (NTOT, 2))
+BALE = (c + 2.5, c + 2.5)
 
 def joe_pose(tt):
-    """Joe's spot, facing, lean (fall), hop and walk phase for the throw in progress."""
-    jx, jy = lerp(c + 0.5, c + 4.0, smooth((tt - 10.6) / 3.0)), lerp(c + 2.5, c + 5.5, smooth((tt - 10.6) / 3.0))
-    ang, fall, hop, walk = math.radians(250), 0.0, 0.0, 0.0
-    if 10.6 <= tt < 13.6: walk = (tt * 2.4) % 1; ang = math.radians(240 if int(tt * 1.5) % 2 else 70)   # backing off, glancing back
+    """Joe's spot, facing, lean (fall), hop, walk phase, and arms ({"right"/"left": (swing, out)}).
+    Arm swing: > 0 takes the hand back, < 0 forward; about -pi is straight up."""
+    back = smooth((tt - 10.6) / 3.0)                               # backing off from the heap
+    jx, jy = lerp(c + 0.5, c + 4.0, back), lerp(c + 2.5, c + 5.5, back)
+    face_throw = math.atan2(-((LAND[1] + LAND[3] / 2) - jy), (LAND[0] + LAND[2] / 2) - jx)
+    face_bale = math.atan2(-(BALE[1] - jy), BALE[0] - jx)
+    ang, fall, hop, walk = face_throw, 0.0, 0.0, 0.0
+    arms = {"right": (0.1, 0.05), "left": (0.05, 0.05)}
+    if 10.6 <= tt < 13.6:                                          # backing away, glancing back at the heap
+        walk = (tt * 2.4) % 1; ang = face_throw + (math.pi if int(tt * 1.5) % 2 else 0)
+        arms = {"right": (0.35 * math.sin(tt * 15), 0.1), "left": (-0.35 * math.sin(tt * 15), 0.1)}
+    elif FAST0 <= tt < 10.6:                                       # pouring: both arms flinging, fast
+        ph = (tt * 3.5) % 1
+        arms = {"right": (lerp(0.9, -1.7, smooth(ph * 1.6)), 0.15), "left": (lerp(0.9, -1.7, smooth(((ph + 0.5) % 1) * 1.6)), 0.15)}
+        fall = 0.08 * math.sin(tt * 22)
     for t0, kind, _ in THROWS:
-        u = (tt - t0) / 0.6
-        if not 0 <= u <= 1: continue
-        if kind == "underarm": fall = 0.12 * math.sin(math.pi * u)
-        elif kind == "overhead": fall = -0.25 * math.sin(math.pi * u * 0.5) if u < 0.6 else 0.3 * math.sin(math.pi * (u - 0.6) / 0.8)
-        elif kind == "spin": ang += 2 * math.pi * smooth(u); hop = 0.25 * math.sin(math.pi * u)
-        elif kind in ("fork", "shower"): fall = 0.22 * math.sin(math.pi * u); hop = 0.1 * math.sin(math.pi * u)
-    if tt >= FAST0 + 0.6 and tt < 10.6: fall = 0.15 * math.sin(tt * 18)                               # flinging fast
-    return jx, jy, ang, fall, hop, walk
+        u = tt - t0
+        if not 0 <= u <= 1.6: continue
+        if u < 0.35:                                               # reach into the bale
+            k = smooth(u / 0.25); ang = face_throw + (face_bale - face_throw) * k
+            fall = 0.32 * k; arms = {"right": (-0.9 * k, 0.1), "left": (-0.6 * k, 0.1)}
+        elif u < 0.6:                                              # turn back with a handful
+            k = smooth((u - 0.35) / 0.25); ang = face_bale + (face_throw - face_bale) * k
+            fall = 0.32 * (1 - k); arms = {"right": (-0.9 * (1 - k) + 0.2 * k, 0.1), "left": (-0.6 * (1 - k), 0.1)}
+        else:
+            w = (u - 0.6) / 0.9                                    # the throw itself, 0..1
+            if kind == "underarm":                                 # swing back, then forward and up
+                sw = (lerp(0.2, 0.95, smooth(w / 0.4)) if w < 0.4 else lerp(0.95, -1.7, smooth((w - 0.4) / 0.3)) if w < 0.7
+                      else lerp(-1.7, 0.1, smooth((w - 0.7) / 0.3)))
+                arms = {"right": (sw, 0.1), "left": (0.15, 0.1)}; fall = 0.1 * math.sin(math.pi * min(1, w * 1.3))
+            elif kind == "overhead":                               # wind up behind the head, whip forward
+                sw = (lerp(0.2, -3.6, smooth(w / 0.35)) if w < 0.35 else lerp(-3.6, -1.2, smooth((w - 0.35) / 0.25)) if w < 0.6
+                      else lerp(-1.2, 0.1, smooth((w - 0.6) / 0.4)))
+                arms = {"right": (sw, 0.15), "left": (-0.4, 0.3)}
+                fall = (-0.15 * smooth(w / 0.35) if w < 0.35 else lerp(-0.15, 0.22, smooth((w - 0.35) / 0.25)) if w < 0.6
+                        else 0.22 * (1 - smooth((w - 0.6) / 0.4)))
+            elif kind == "spin":                                   # a full turn with the arm out, let go mid-spin
+                ang = face_throw + 2 * math.pi * smooth(w); hop = 0.22 * math.sin(math.pi * w)
+                arms = {"right": (-0.4, 1.3 * math.sin(math.pi * w)), "left": (0.2, 0.5 * math.sin(math.pi * w))}
+            elif kind == "fork":                                   # both hands on the fork, scoop and flick
+                sw = (lerp(-0.5, 0.3, smooth(w / 0.4)) if w < 0.4 else lerp(0.3, -1.6, smooth((w - 0.4) / 0.3)) if w < 0.7
+                      else lerp(-1.6, -0.4, smooth((w - 0.7) / 0.3)))
+                arms = {"right": (sw, 0.05), "left": (sw, 0.05)}; fall = 0.18 * math.sin(math.pi * w)
+            elif kind == "shower":                                 # both arms up, flinging a big handful
+                sw = (lerp(0.2, 0.9, smooth(w / 0.4)) if w < 0.4 else lerp(0.9, -2.6, smooth((w - 0.4) / 0.3)) if w < 0.7
+                      else lerp(-2.6, 0.1, smooth((w - 0.7) / 0.3)))
+                arms = {"right": (sw, 0.25), "left": (sw, 0.25)}; hop = 0.12 * math.sin(math.pi * w)
+    return jx, jy, ang, fall, hop, walk, arms
 
 screen_path = OUT / "screen.json"
 SCREEN = json.loads(screen_path.read_text()) if screen_path.exists() else {}
@@ -96,13 +137,18 @@ for f in range(NF):
     tt = f / FPS
     path = OUT / f"f_{f:05d}.jpg"
     if path.exists() and str(f) in SCREEN: continue
-    jx, jy, ang, fall, hop, walk = joe_pose(tt)
+    jx, jy, ang, fall, hop, walk, arms = joe_pose(tt)
+    sc.set_walker(jx, jy, HP.FLOOR_Z + max(0.0, hop), ang, 200.0, walk=walk, fall=fall, arms=arms, tool=False)
+    bpy.context.view_layer.update()
+    hw = sc.hand_position("right"); hand = (hw[0], -hw[1], hw[2])                  # world -> grid
     landed = int(np.searchsorted(T_LAND, tt, "right"))
-    # straws in the air: from the hand to the landing spot, arcing and tumbling
-    hx, hy, hz = HAND_AT(jx, jy)
-    air = np.nonzero((T_LAND > tt) & (T_LAND - 0.75 <= tt))[0][:60]
-    u = (tt - (T_LAND[air] - 0.75)) / 0.75
-    ax = hx + (X[air] - hx) * u; ay = hy + (Y[air] - hy) * u; az = hz * (1 - u) + 1.4 * np.sin(np.pi * u) + HP.FLOOR_Z * u
+    # straws in the air: from where they left his hand to the landing spot, arcing and tumbling
+    air = np.nonzero((T_LAND > tt) & (T_REL <= tt))[0][:60]
+    for k in air: REL_AT.setdefault(int(k), hand)
+    rel = np.array([REL_AT[int(k)] for k in air]).reshape(-1, 3)
+    u = (tt - T_REL[air]) / FLY
+    ax = rel[:, 0] + (X[air] - rel[:, 0]) * u; ay = rel[:, 1] + (Y[air] - rel[:, 1]) * u
+    az = rel[:, 2] * (1 - u) + 0.9 * np.sin(np.pi * u) + HP.FLOOR_Z * u
     # straws lying on the planks: only the latest 120 (the older ones are on the heap now)
     k0 = max(0, landed - 120); lay = np.arange(k0, landed)
     flash = np.clip(1 - (tt - T_LAND[lay]) / 0.5, 0, 1)                    # just landed: a bright pop
@@ -115,19 +161,17 @@ for f in range(NF):
     # the heap: every counted straw that's been raked away
     rad, hgt = HP.heap_size(max(k0, 1)); heap.scale = (max(rad, 0.01), max(rad, 0.01), max(hgt, 0.01))
     # Joe, Daisy (watching, then chewing a straw), the pitchfork in Joe's hands for the forkful
-    sc.set_walker(jx, jy, HP.FLOOR_Z + max(0.0, hop), ang, 200.0, walk=walk, fall=fall)
     sc.set_character(daisy, c - 2.0, c + 2.2, HP.FLOOR_Z, math.radians(-30 + 25 * math.sin(tt * 0.9)), 200.0,
                      fall=0.18 * max(0.0, math.sin(tt * 5)) if tt > 7.5 else 0.0)
-    fu = (tt - 6.9) / 0.6
-    if 0 <= fu <= 1.4:
-        fork_root.location = (jx + 0.5 + 0.3 * math.cos(ang), -(jy + 0.5) - 0.3 * math.sin(ang), HP.FLOOR_Z + 0.4)
-        fork_root.rotation_euler = (0, -0.6 + 1.2 * smooth(fu), ang)
+    fu = tt - 6.8
+    if 0.5 <= fu <= 1.6:                                          # the pitchfork in his hands
+        fork_root.location = hw; fork_root.rotation_euler = (0, -1.2 + 1.6 * smooth((fu - 0.5) / 1.0), ang)
     else:
         fork_root.location = (c + 4.1, -(c + 3.9), HP.FLOOR_Z); fork_root.rotation_euler = (0.25, 0, 0.6)
     # camera: close by Joe, then pulling back and up to show the heap growing behind him
     v = smooth((tt - 9.6) / 4.0)
-    cx, cy = lerp(c + 0.4, c + 1.0, v), lerp(c + 2.6, c - 2.0, v)
-    s = 260.0 * (60.0 / 260.0) ** v; pitch = lerp(12.0, 15.0, v); tz = lerp(0.75, 2.4, v); yaw = lerp(-20.0, -14.0, v)
+    cx, cy = lerp(c + 0.2, c + 1.0, v), lerp(c + 3.4, c - 2.0, v)
+    s = 210.0 * (60.0 / 210.0) ** v; pitch = lerp(16.0, 15.0, v); tz = lerp(0.75, 2.4, v); yaw = lerp(-20.0, -14.0, v)
     sc.set_tufts(grid, cx, cy, s); sc.set_floor(s)
     sc.set_camera(cx, cy, s, yaw, pitch, tz)
     bpy.context.view_layer.update()

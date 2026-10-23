@@ -318,7 +318,7 @@ class Scene:
             a, b = Vector(a), Vector(b); v = b - a
             return part("cylinder", (a + b) / 2, m=m, rot=v.to_track_quat("Z", "Y").to_euler(),
                         radius=r, depth=v.length, vertices=verts, parent=parent)
-        self.legs = []; self.hat = None
+        self.legs = []; self.hat = None; self.arms = {}; self.tool = []
         if self.character == "sheep":
             # Daisy: a fluffy white body, black face and legs, built facing +X, trotting on diagonal leg pairs
             self.body.scale = (2.1, 2.1, 2.1)          # big enough to read on a phone
@@ -363,11 +363,17 @@ class Scene:
                 part("cylinder", (0, 0, -0.09), m=jeans, parent=hip, radius=0.05, depth=0.17, vertices=16)
             part("uv_sphere", (0, 0, 0.3), (0.85, 1, 1.05), jeans, radius=0.15, segments=24, ring_count=12)
             part("uv_sphere", (0.01, 0, 0.36), (0.8, 0.95, 0.8), shirt, radius=0.14, segments=24, ring_count=12)
+            self.arms = {}
             for side in (-1, 1):
                 part("cube", (0.1, side * 0.06, 0.38), (0.012, 0.022, 0.07), jeans)   # overall straps
                 hand = (0.17, side * 0.14, 0.27) if side > 0 else (-0.04, -0.17, 0.25)
-                stick((0.0, side * 0.13, 0.42), hand, 0.035, shirt)
-                part("uv_sphere", hand, m=skin, radius=0.035, segments=12, ring_count=6)
+                # a shoulder joint: the arm and hand hang from it, so set_walker(arms=...) can swing them
+                sh = bpy.data.objects.new(f"Shoulder{side}", None); self.sc.collection.objects.link(sh)
+                sh.parent = self.body; sh.location = (0.0, side * 0.13, 0.42)
+                rel = (hand[0], hand[1] - side * 0.13, hand[2] - 0.42)
+                stick((0, 0, 0), rel, 0.035, shirt, parent=sh)
+                part("uv_sphere", rel, m=skin, radius=0.035, segments=12, ring_count=6, parent=sh)
+                self.arms["left" if side > 0 else "right"] = (sh, rel)
             part("uv_sphere", (0.01, 0, 0.56), m=skin, radius=0.11, segments=24, ring_count=12)   # head
             part("uv_sphere", (0.115, 0, 0.55), m=skin, radius=0.025, segments=12, ring_count=6)  # nose
             # the face from his profile picture: big shiny eyes, rosy cheeks, a moustache
@@ -384,8 +390,8 @@ class Scene:
             part("cylinder", (0, 0, 0.63), m=straw, radius=0.2, depth=0.02, vertices=32, parent=self.hat)    # brim
             part("cylinder", (0, 0, 0.68), m=straw, radius=0.1, depth=0.09, vertices=24, parent=self.hat)    # crown
             part("cylinder", (0, 0, 0.655), m=band, radius=0.102, depth=0.025, vertices=24, parent=self.hat)
-            stick((0.1, 0.14, 0.45), (0.4, 0.14, 0.02), 0.014, wood)                              # hoe
-            part("cube", (0.41, 0.14, 0.03), (0.02, 0.06, 0.035), metal)
+            self.tool = [stick((0.1, 0.14, 0.45), (0.4, 0.14, 0.02), 0.014, wood),                # hoe
+                         part("cube", (0.41, 0.14, 0.03), (0.02, 0.06, 0.035), metal)]
         # far away: a glowing dot instead
         dm, _ = _material("Dot", lin(self.T["dot"]), emit=(lin(self.T["dot"]), 6.0))
         bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0, location=(0, 0, 0.2))
@@ -493,11 +499,11 @@ class Scene:
     def add_character(self, character, recolour=None):
         """A second character (e.g. Joe watching while Daisy walks). Returns a handle for set_character.
         recolour: {material name: rgb}, e.g. {"Shirt": (60, 140, 230)} for a farmer who isn't Joe."""
-        keep = {k: getattr(self, k) for k in ("root", "body", "legs", "hat", "dot", "glow", "character")}
+        keep = {k: getattr(self, k) for k in ("root", "body", "legs", "hat", "dot", "glow", "arms", "tool", "character")}
         self.character = character; self._recolour = recolour or {}
         try: self._walker()
         finally: self._recolour = {}
-        handle = {k: getattr(self, k) for k in ("root", "body", "legs", "hat", "dot", "glow")}
+        handle = {k: getattr(self, k) for k in ("root", "body", "legs", "hat", "dot", "glow", "arms", "tool")}
         for k, v in keep.items(): setattr(self, k, v)
         return handle
 
@@ -618,7 +624,7 @@ class Scene:
         self._line_fade.default_value = self.T["line_k"] * min(1.0, max(0.0, (s_px - 9) / 18))
         for sock in self._line_w: sock.default_value = 0.025 * max(1.0, 30 / s_px)
 
-    def set_walker(self, x, y, z, ang, s_px, walk=0.0, fall=0.0, hat=None):
+    def set_walker(self, x, y, z, ang, s_px, walk=0.0, fall=0.0, hat=None, arms=None, tool=True):
         """x, y in cells (centre of the square = +0.5); walk 0..1 = progress of the current step.
         fall 0..1: tipped forward onto his face (1 = flat). hat: None = on his head, or
         ((x, y, z), (rx, ry, rz)) in his own frame (x forward) when it has come off."""
@@ -641,6 +647,18 @@ class Scene:
             else:
                 self.hat.location, self.hat.rotation_euler = hat
         self.glow.data.energy = 6.0 * max(1, 30 / s_px) ** 2
+        # arms: {"right"/"left": (swing, out)} in radians -- swing > 0 takes the hand back, < 0 forward
+        # and up; out lifts it sideways. Missing arms hang as built.
+        for k, (sh, _) in self.arms.items():
+            sw, out = (arms or {}).get(k, (0.0, 0.0))
+            sh.rotation_euler = ((1 if k == "left" else -1) * out, sw, 0)
+        for o in self.tool: o.hide_render = far or not tool
+
+    def hand_position(self, which="right"):
+        """Where a hand is in the world right now (call after set_walker and a view-layer update)."""
+        from mathutils import Vector
+        sh, rel = self.arms[which]
+        return tuple(sh.matrix_world @ Vector(rel))
 
     def set_camera(self, cx, cy, s_px, yaw_deg, pitch_deg=None, tz=0.0):
         """Look at grid point (cx, cy) at height tz, s_px pixels per cell there; pitch defaults to 54 deg."""

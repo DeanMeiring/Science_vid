@@ -1,5 +1,5 @@
-"""Lay notes over the Experiment 7 live demo: the tally and pi's estimate, a deadpan label for each
-kind of throw, "gold." / "not gold." on the first landings, and "this is a heap." when it grows.
+"""Lay notes over the Experiment 7 live demo: the tally and pi's estimate, "gold." / "not gold." on the
+first landings, "backing away." and "this is a heap." (Dean: no labels for the throws.)
 
 Usage: .venv/Scripts/python -X utf8 prototypes/hay_demo_compose.py
 Reads renders/ep07_pi/demo_frames/ (blender/hay_demo.py); writes demo.mp4 (silent).
@@ -27,8 +27,6 @@ def text(dr, xy, s, f, fill, stroke=6, anchor="mm"):
 def al(col, a): return col + (int(255 * a),)
 def pop(tt, t0, t1, rise=0.15): return float(np.clip(min((tt - t0) / rise, (t1 - tt) / rise), 0, 1))
 
-# the throws in blender/hay_demo.py, each with a label in Joe's deadpan voice
-LABELS = [(0.5, "careful toss."), (2.7, "big fling."), (4.9, "fancy spin."), (6.9, "the fork."), (8.7, "both hands.")]
 
 ff = subprocess.Popen([ffmpeg(), "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
                        "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "medium", "-crf", "19",
@@ -48,9 +46,6 @@ for f in range(NF):
     text(dr, (W - 70, 200), f"gold: {g:,}", HAND(76), GOLD, 6, "ra")
     if g: text(dr, (W - 70, 290), f"2 × {n:,} ÷ {g:,} = {2 * n / g:.2f}", HAND(60), WHITE, 5, "ra")
     jx, jy = sp["joe"]
-    for t0, lab in LABELS:
-        a = pop(tt, t0, t0 + 1.6)
-        if a: text(dr, (min(max(jx, 230), W - 230), jy - 330), lab, HAND(84), al(WHITE, a))
     for t0, gold in landings:
         a = pop(tt, t0, t0 + 1.1)
         if a: text(dr, (W / 2, 1250), "gold." if gold else "not gold.", HAND(100), al(GOLD if gold else WHITE, a))

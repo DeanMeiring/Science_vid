@@ -32,3 +32,13 @@ if __name__ == "__main__":   # re-check every number the episode uses
     print(f"crossing rate over 100,000 straws: {d['cross'].mean():.4f} (2/pi = {2 / np.pi:.4f})")
     for n in (10, 100, 1000, 10000, 100000):
         print(f"  {n:>7,} straws: {int(d['cross'][:n].sum()):>6,} cross -> pi ~ {est[n - 1]:.4f}")
+
+def spread(d, k0, k1, x0, y0, width, rows, seed=7):
+    """Where to draw straws k0..k1 on a bigger floor: each keeps its angle and its place across its
+    plank (the fraction of y), which is all that decides whether it crosses a crack, so the count
+    is exactly the simulation's. Only which plank and how far along it are re-drawn, inside the
+    area x0..x0+width, planks y0..y0+rows. Returns x, y, ang, cross."""
+    r = np.random.default_rng(seed + k0)
+    n = k1 - k0; fy = d["y"][k0:k1] % 1.0
+    x = x0 + 0.5 + r.uniform(0, width - 1, n); y = y0 + r.integers(0, rows, n) + fy
+    return x, y, d["ang"][k0:k1], d["cross"][k0:k1]

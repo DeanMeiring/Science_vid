@@ -27,8 +27,11 @@
   on which experiment comes next, I want to think about it"). Branch `claude/episode-6-barns`
   (stacked on `claude/episode-5-crops`). `pipeline/barns.py` is the sim; `episodes/ep06_barns.py`
   the script (Daisy picks, Joe hosts and KNOWS; prize = Joe's tractor, two goats), voiced in george
-  (37.1 s). **The "Next experiment" line is left out until Dean picks Experiment 7**; add it to the
-  "end" beat and re-voice. Checked: 1M games switch 66.6%; the 1,000 shown: stay 339, switch 661;
+  (41.2 s, Dean: "voice is good"). Ends teasing Experiment 7, which Dean picked on 23 Oct:
+  **pi from a bale of hay** (Buffon's needle: straws as long as the floorboard gap cross a crack
+  with probability 2/pi). Dean wants Experiment 7 to feel different: Joe doing a farm job, with
+  more 3D Blender design. Other ideas offered then: the fastest slide (brachistochrone), golden-angle
+  sunflower, bees' hexagons, stacking apples (Kepler). Checked: 1M games switch 66.6%; the 1,000 shown: stay 339, switch 661;
   blind host = 50/50; Parade 1990 (~10,000 letters), Erdős and the simulation (Wikipedia).
 - **Experiment 5 posted 22 Oct 2026, 22:52** to both from the studio: YouTube
   https://youtube.com/shorts/TKMkmPbBdc8 and Instagram https://www.instagram.com/reel/Dez4ouTlgJu/

@@ -23,6 +23,12 @@
 - **Done for the day after Experiment 5** (Dean: "finish up for today, will continue tomorrow").
   Next, when Dean asks: Experiment 6, "three barns, one prize" (Monty Hall), as Experiment 5's
   last line promises; check the facts by simulation first. Idea from a comment: "Get 3 helpers".
+- **Experiment 7: pi from a bale of hay** (started 23 Oct, Dean: "yes start experiment 7").
+  Branch `claude/episode-7-pi` (stacked on `claude/episode-6-barns`). `pipeline/hay.py` is the sim
+  (straws one board wide dropped at random; crossing rate 63.6% vs 2/pi 63.66%); seed 1:
+  10 -> 2.50, 100 -> 2.99, 1,000 -> 3.03, 10,000 -> 3.13, 100,000 -> 3.143. `episodes/ep07_pi.py`,
+  voiced in george (32.2 s; "pi" spoken as "pie"). **No "Next experiment" line yet: Dean picks
+  Experiment 8.** Source: Wikipedia, "Buffon's needle problem" (18th century, Comte de Buffon, 2l/(pi t)).
 - **Experiment 6: three barns, one prize (Monty Hall)** (started 23 Oct; Dean: "build, but wait
   on which experiment comes next, I want to think about it"). Branch `claude/episode-6-barns`
   (stacked on `claude/episode-5-crops`). `pipeline/barns.py` is the sim; `episodes/ep06_barns.py`

@@ -116,6 +116,7 @@ T_PULL = tl.t_buffon - 0.2
 LABELS = {7: (FO.MORE[7]["title"], FO.MORE[7]["sub"]), 6: (FO.MORE[6]["title"], FO.MORE[6]["sub"]),
           5: (FO.MORE[5]["title"], FO.MORE[5]["sub"]), 4: ("Experiment #4", "Joe & Daisy: spotless!"),
           **{k: (FO.FIELDS[k]["title"], FO.FIELDS[k]["sub"]) for k in (1, 2, 3)}}
+NUDGE = {7: (14, -208), 6: (175, -168), 4: (30, -76), 5: (-105, 87)}   # #4-#7 sit close together: spread out, with arrows
 LABEL_T = {7: T_PULL + 0.5, 5: T_PULL + 1.0, 6: T_PULL + 1.3, 4: T_PULL + 1.5, 1: T_PULL + 1.7, 2: T_PULL + 2.1, 3: T_PULL + 2.5}
 B0, B1 = tl.win["blur"]
 
@@ -156,9 +157,12 @@ for f in range(tl.nf):
             a = pop(tt, t0, tl.duration + 1, 0.25)
             fx, fy = sp["fields"][str(k)][:2]
             if not a: continue
-            x = min(max(fx, 215), W - 215); y = min(max(fy, 290), 1450)
+            dx, dy = NUDGE.get(k, (0, 0))
+            x = min(max(fx + dx, 215), W - 215); y = min(max(fy + dy, 290), 1450)
             title, sub_ = LABELS[k]; today = k == 7
-            comp(img, layer(("lab", k, int(x / 6), int(y / 6), q(a)), lambda dr, x=x, y=y, a=a, title=title, sub_=sub_, today=today: (
+            comp(img, layer(("lab", k, int(x / 6), int(y / 6), int(fx / 6), int(fy / 6), q(a)), lambda dr, x=x, y=y, fx=fx, fy=fy, a=a,
+                            title=title, sub_=sub_, today=today, k=k: (
+                arrow(dr, (x, y + (25 if fy > y else -95)), (fx, fy + 40 if fy > y else fy + 30), al(WHITE, a), 5) if k in NUDGE else None,
                 text(dr, (x, y - 62), title, MARK(58 if today else 50), al(GOLD if today else WHITE, a), 6),
                 text(dr, (x, y - 8), sub_, HAND(52), al(WHITE, a), 5))))
     for t0, t1, c in spans:

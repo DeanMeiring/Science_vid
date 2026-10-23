@@ -5,7 +5,7 @@ gold ones and pi's estimate are the simulation's. They arrive in stages that get
 (Dean, 23 Oct), pinned to words in the narration (words.json from pipeline/align.py):
   hand     three throws by Joe: landing on "gold." (1), "not gold." (2) and "wide." (3)
   quicker  "Now: faster": Joe throws quicker and quicker, 10 straws by "Ten"
-  blur     blurry-fast Joe: 100 by "2.99"
+  blur     blurry-fast Joe, after he's said "2.5" (10 straws): 100 by "2.99"
   barrow   a wheelbarrow tips: 1,000 by "3.03"
   tractor  the tractor's trailer tips: 10,000 by "3.13"
   combine  a combine harvester drives past spewing straw: 100,000 by "3.14!"
@@ -56,7 +56,8 @@ class Timeline:
         land.append(self.t_notgold - 0.1); stage.append("hand")
         land.append(self.t_wide - 0.1); stage.append("hand")
         add(self.t_faster + 1.2, self.t_ten - 0.1, 7, "quicker", 0.6)              # 4..10, quicker and quicker
-        add(self.t_ten + 0.4, self.t_299 - 0.1, 90, "blur", 1.6)                   # 11..100
+        self.t_25 = W("2.5.")
+        add(self.t_25 + 0.45, self.t_299 - 0.1, 90, "blur", 1.6)                  # 11..100, once he's said "2.5"
         add(self.t_299 + 1.0, self.t_303 - 0.1, 900, "barrow", 0.5)                # the wheelbarrow tips
         add(self.t_303 + 1.1, self.t_313 - 0.1, 9000, "tractor", 0.5)              # the trailer tips
         add(self.t_313 + 0.9, self.t_314 - 0.05, n - 10000, "combine", 1.4)        # the combine, faster and faster

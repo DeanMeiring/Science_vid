@@ -71,3 +71,37 @@ if __name__ == "__main__":
     a = rgba[..., 3:]; im = im * (1 - a) + rgba[..., :3] * a
     Image.fromarray((im * 255).astype(np.uint8)).save(ROOT / "renders" / "ep04_farmers" / "overview_map.png")
     print(boxes, "barn", barn)
+
+# ---------------- the farm after Experiment 6 (for Experiment 7's zoom out, and later ones) ----------------
+# Positions relative to Experiment 4's field (as FIELDS): #5 where it was in Experiment 5 (90 left, 20 up),
+# #6 where it was in Experiment 6 (110 right, 40 down), #7 (the hay yard) in the free space on the left.
+MORE = {5: dict(at=(-90, -20), title="Experiment #5", sub="the crop circle"),
+        6: dict(at=(110, 40), title="Experiment #6", sub="switch!"),
+        7: dict(at=(-170, 0), title="Experiment #7", sub="today: pi from hay!")}
+
+def build_all():
+    """build(), plus Experiment 5's crop circle and Experiment 6's three barns with their two bars of
+    tractors (339 stay, 661 switch) painted in. Returns rgba, fid, boxes, barn (as build)."""
+    import crops as CR, barns as BG
+    rgba, fid, boxes, barn = build()
+    g5, _ = CR.run(100044, size=N); c = N // 2
+    ys, xs = np.nonzero(g5); k = g5[ys, xs]
+    col = np.array([(0, 0, 0), (120, 80, 48), (222, 178, 70), (236, 120, 30)]) / 255
+    px, py = xs - c - 90 + SZ // 2, ys - c - 20 + SZ // 2
+    rgba[py, px, :3] = col[k]; rgba[py, px, 3] = 1; fid[py, px] = 5
+    boxes[5] = (int(xs.min() - c - 90), int(ys.min() - c - 20), int(xs.max() - c - 90), int(ys.max() - c - 20))
+    # #6: three red barns in a row (door squares at x -3.6, 0, +3.6 from 110; 3 squares wide) and, behind
+    # them, the two bars: one square per 10 wins, 10 wide (stay on the left, switch on the right)
+    g = BG.games(1, 1000); stay = int((g["pick"] == g["prize"]).sum()); switch = 1000 - stay
+    bx0, by0 = 110, 40
+    for dx in (-4, 0, 4):
+        rgba[SZ // 2 + by0 - 4:SZ // 2 + by0 - 1, SZ // 2 + bx0 + dx - 1:SZ // 2 + bx0 + dx + 2, :3] = np.array((176, 46, 38)) / 255
+        rgba[SZ // 2 + by0 - 4:SZ // 2 + by0 - 1, SZ // 2 + bx0 + dx - 1:SZ // 2 + bx0 + dx + 2, 3] = 1
+    for side, wins in ((-4, stay), (4, switch)):
+        rows = int(round(wins * 0.7 * 0.55 / 5.5))                  # the bars' real length in squares (0.7 per 10 wins)
+        x0 = SZ // 2 + bx0 + side - 3; y1 = SZ // 2 + by0 - 9
+        rgba[y1 - rows:y1, x0:x0 + 6, :3] = np.array((206, 34, 28)) / 255; rgba[y1 - rows:y1, x0:x0 + 6, 3] = 1
+    fid[SZ // 2 + by0 - 60:SZ // 2 + by0, SZ // 2 + bx0 - 8:SZ // 2 + bx0 + 9][rgba[SZ // 2 + by0 - 60:SZ // 2 + by0,
+        SZ // 2 + bx0 - 8:SZ // 2 + bx0 + 9, 3] > 0] = 6
+    boxes[6] = (bx0 - 8, by0 - 60, bx0 + 8, by0)
+    return rgba, fid, boxes, barn

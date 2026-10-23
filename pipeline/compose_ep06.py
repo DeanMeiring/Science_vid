@@ -142,7 +142,7 @@ for f in range(tl.nf):
     # the 1,000 games: live counts above the bars
     if tl.t_fifty + 0.5 <= tt < tl.t_her:
         for k in ("stay", "switch"):
-            x, y = sp["tops"][k]; n = sp[k]
+            x, y = sp["tops"][k]; n = sp[k]; y = max(y, 480)          # stay clear of the games counter
             comp(img, layer(("bar", k, n, int(x / 6), int(y / 6)), lambda dr, x=x, y=y, n=n, k=k: (
                 text(dr, (x, y - 120), f"{n}", MARK(96), GOLD if k == "switch" else WHITE, 7),
                 text(dr, (x, y - 45), f"{k} wins", HAND(64), WHITE, 5))))

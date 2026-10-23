@@ -33,6 +33,10 @@
   more 3D Blender design. Other ideas offered then: the fastest slide (brachistochrone), golden-angle
   sunflower, bees' hexagons, stacking apples (Kepler). Checked: 1M games switch 66.6%; the 1,000 shown: stay 339, switch 661;
   blind host = 50/50; Parade 1990 (~10,000 letters), Erdős and the simulation (Wikipedia).
+  **Rendered 23 Oct** (`renders/ep06_barns/ep06_barns.mp4`, 42.9 s, 26 MB; full render 48 min).
+  New 3D props in `blender/barns_props.py`: barns whose doors swing open, a goat, Joe's tractor
+  (also instanced as little tractor "wins"). Behind the doors: goat, tractor, goat. Letters rain
+  down on "1990". Ends on the whole farm with all six experiments labelled. Not posted yet.
 - **Experiment 5 posted 22 Oct 2026, 22:52** to both from the studio: YouTube
   https://youtube.com/shorts/TKMkmPbBdc8 and Instagram https://www.instagram.com/reel/Dez4ouTlgJu/
 - Branches `claude/episode-3`, `claude/episode-4-farmers`, `claude/episode-5-crops` are pushed,

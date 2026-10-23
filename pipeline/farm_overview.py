@@ -105,3 +105,23 @@ def build_all():
         SZ // 2 + bx0 - 8:SZ // 2 + bx0 + 9, 3] > 0] = 6
     boxes[6] = (bx0 - 8, by0 - 60, bx0 + 8, by0)
     return rgba, fid, boxes, barn
+
+# ---------------- the farm after Experiment 7 (for Experiment 8's zoom out) ----------------
+# #7 (the hay yard) at -170, 0 from Experiment 4's field: its plank floor and the hay mountain (seen from
+# above, a golden disc 12 squares across its middle); #8 (the garden) on the far left at -260, 0.
+MORE8 = {7: dict(title="Experiment #7", sub="pi from hay"), 8: dict(title="Experiment #8", sub="today: what grows?")}
+
+def build_upto7():
+    """build_all(), plus Experiment 7's plank floor and hay mountain painted in."""
+    rgba, fid, boxes, barn = build_all()
+    h = SZ // 2
+    x0, x1, y0, y1 = -178, -162, -4, 6                            # the plank floor
+    rgba[h + y0:h + y1, h + x0:h + x1, :3] = np.array((176, 128, 82)) / 255; rgba[h + y0:h + y1, h + x0:h + x1, 3] = 1
+    yy, xx = np.mgrid[-14:15, -14:15]; disc = xx ** 2 + yy ** 2 <= 12 ** 2   # the mountain
+    shade = 0.85 + 0.15 * (1 - np.sqrt(xx ** 2 + yy ** 2) / 12)
+    ys, xs = np.nonzero(disc); cy, cx = -12, -169
+    rgba[h + cy + ys - 14, h + cx + xs - 14, :3] = (np.array((230, 196, 110)) / 255)[None] * shade[ys, xs, None]
+    rgba[h + cy + ys - 14, h + cx + xs - 14, 3] = 1
+    fid[h - 26:h + 7, h - 184:h - 154][rgba[h - 26:h + 7, h - 184:h - 154, 3] > 0] = 7
+    boxes[7] = (-182, -24, -156, 6)
+    return rgba, fid, boxes, barn

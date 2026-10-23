@@ -291,9 +291,7 @@ $('privacy').onclick = e => { const b = e.target.closest('button'); if (!b) retu
 $('post-both').onclick = () => post(['youtube', 'instagram']);
 $('download').onclick = () => { if (cur) window.location.href = '/download/' + encodeURIComponent(cur.name); };
 $('copy-tt').onclick = async () => {        // title, a blank line, the description (YouTube's #Shorts tag left out)
-  const text = ($('title').value.trim() + '
-
-' + $('desc').value.trim()).replace(/[ 	]*#shorts/gi, '').trim();
+  const text = ($('title').value.trim() + '\n\n' + $('desc').value.trim()).replace(/[ \t]*#shorts\b/gi, '').trim();
   try { await navigator.clipboard.writeText(text); }
   catch { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
   const b = $('copy-tt'), was = b.textContent; b.textContent = '✓ Copied'; setTimeout(() => b.textContent = was, 1500);

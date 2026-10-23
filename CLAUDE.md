@@ -23,9 +23,18 @@
 - **Done for the day after Experiment 5** (Dean: "finish up for today, will continue tomorrow").
   Next, when Dean asks: Experiment 6, "three barns, one prize" (Monty Hall), as Experiment 5's
   last line promises; check the facts by simulation first. Idea from a comment: "Get 3 helpers".
-- **Next: Experiment 8, "Get 3 helpers"** (Dean picked it, 23 Oct; a viewer's comment on Experiment 4):
+- **Experiment 8: "what grows if you plant it?"** (Dean's gag, 23 Oct): Joe plants a mustard seed, an
+  apple seed, both together, and a rusty wheelbarrow tyre; the real "law" is biogenesis (life only from
+  life; Pasteur 1859). Branch `claude/episode-8-plant`; `episodes/ep08_plant.py` (facts and sources in
+  its docstring), voiced in george (32.9 s). Dean asked for "nonsense that sounds legit"; kept every line
+  true instead (mustard is an annual, 4 ft, not a tree; seed-grown apples don't breed true; weeds grow
+  round the tyre from seeds already in the soil).
+- **Parked: "Get 3 helpers"** (Dean picked it first, then parked it on 23 Oct; a viewer's comment on Experiment 4):
   Joe and three helpers on one field, the same rule as Experiment 1. Find the story by simulation
-  first; open on an "If you..." hook; reuse the backdrop, Kenney models and Joe's arms.
+  first; open on an "If you..." hook; reuse the backdrop, Kenney models and Joe's arms. Simulated
+  (23 Oct): all back home: 2 farmers ~4 in 10, 3 farmers 0 of 1,500, 4 farmers ~1 in 200; with 4,
+  usually one or two walk off on a highway, all four in ~1 in 7. Story idea: "more helpers, more mess",
+  helpers leaving one by one; helpers = Daisy + a cow + a pig (not decided).
 - **Experiment 7: pi from a bale of hay** (started 23 Oct, Dean: "yes start experiment 7").
   Branch `claude/episode-7-pi` (stacked on `claude/episode-6-barns`). `pipeline/hay.py` is the sim
   (straws one board wide dropped at random; crossing rate 63.6% vs 2/pi 63.66%); seed 1:

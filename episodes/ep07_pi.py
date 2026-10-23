@@ -20,15 +20,16 @@ EXPERIMENT = 7
 THEME = "farm"
 # VOICE: Farmer Joe's default (pocket:george)
 
-# Dean (23 Oct): deadpan Joe, but straight into the action: two or three throws, then "Now: faster" and
+# Dean (23 Oct): open on a hook ("If you...", better for retention), not "Experiment number 7" (that's
+# on screen). Deadpan Joe, straight into the action: two or three throws, then "Now: faster" and
 # it escalates: Joe spam-throws (100), a wheelbarrow dumps (1,000), a tractor dumps (10,000), a combine
 # harvester (100,000; our own design, no brand colours). Every load lands on the planks first (that's
 # where it's counted), then hops onto the heap, which grows into a mountain. The maths and the numbers stay as checked.
 NARRATION = [
-    ("throw",  "Experiment number 7: finding pi, with hay. If I throw a straw, and it lands across a crack: gold. "
-               "If it doesn't: not gold. My boards are exactly one straw wide.",
-               "Experiment number seven: finding pie, with hay. If I throw a straw, and it lands across a crack: gold. "
-               "If it doesn't: not gold. My boards are exactly one straw wide."),
+    ("throw",  "If you throw hay at a floor, you can find pi. Watch. This straw lands across a crack: gold. "
+               "This one doesn't: not gold. My boards are exactly one straw wide.",
+               "If you throw hay at a floor, you can find pie. Watch. This straw lands across a crack: gold. "
+               "This one doesn't: not gold. My boards are exactly one straw wide."),
     ("fast",   "Now: faster. Two times all the straws, divided by the gold ones, gets closer and closer to pi.",
                "Now: faster. Two times all the straws, divided by the gold ones, gets closer and closer to pie."),
     ("count",  "Ten straws: 2.5. A hundred: 2.99. A thousand: 3.03. Ten thousand: 3.13. A hundred thousand... 3.14!",

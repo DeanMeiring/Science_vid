@@ -36,7 +36,7 @@ class Timeline:
         self.t_gold, self.t_notgold, self.t_wide = W("gold."), W("gold.", 1), W("wide.")
         self.t_faster, self.t_ten, self.t_299 = W("Now:"), W("Ten"), W("2.99.")
         self.t_303, self.t_ten_k, self.t_313, self.t_314 = W("3.03."), W("Ten", 1), W("3.13."), W("3.14!")
-        self.t_daisy, self.t_mountain, self.t_buffon, self.t_see = W("Not", 1), W("I", 1), W("guy"), W("See")   # "Not the pie", "I did not plan"
+        self.t_daisy, self.t_mountain, self.t_buffon, self.t_see = W("Not", 1), W("did"), W("guy"), W("See")   # "Not the pie", "I did not plan"
         n = ep.STRAWS["n"]
         d = HY.drop(ep.STRAWS["seed"], n)
         # The script says the 2nd throw is "not gold", but the run's first three straws all cross. The

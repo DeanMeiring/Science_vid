@@ -23,6 +23,13 @@
 - **Done for the day after Experiment 5** (Dean: "finish up for today, will continue tomorrow").
   Next, when Dean asks: Experiment 6, "three barns, one prize" (Monty Hall), as Experiment 5's
   last line promises; check the facts by simulation first. Idea from a comment: "Get 3 helpers".
+- **Experiment 6: three barns, one prize (Monty Hall)** (started 23 Oct; Dean: "build, but wait
+  on which experiment comes next, I want to think about it"). Branch `claude/episode-6-barns`
+  (stacked on `claude/episode-5-crops`). `pipeline/barns.py` is the sim; `episodes/ep06_barns.py`
+  the script (Daisy picks, Joe hosts and KNOWS; prize = Joe's tractor, two goats), voiced in george
+  (37.1 s). **The "Next experiment" line is left out until Dean picks Experiment 7**; add it to the
+  "end" beat and re-voice. Checked: 1M games switch 66.6%; the 1,000 shown: stay 339, switch 661;
+  blind host = 50/50; Parade 1990 (~10,000 letters), Erdős and the simulation (Wikipedia).
 - **Experiment 5 posted 22 Oct 2026, 22:52** to both from the studio: YouTube
   https://youtube.com/shorts/TKMkmPbBdc8 and Instagram https://www.instagram.com/reel/Dez4ouTlgJu/
 - Branches `claude/episode-3`, `claude/episode-4-farmers`, `claude/episode-5-crops` are pushed,
@@ -40,7 +47,7 @@
   each mirror moment; while racing only mirror moments are shown, so every frame is a true
   mirror image. Pumpkins added to the farm theme (`scene.set_pumpkins`). Dean then asked for the
   whole-farm zoom out at the end (as in Experiment 4): only the last 175 frames were re-rendered.
-  Experiment 4's spot shows Daisy. Not posted yet.
+  Experiment 4's spot shows Daisy. Posted 22 Oct 22:52 (links above).
   Lesson: word lookups match every occurrence ("next crop" before "Next experiment"); pass nth.
 - **Posted:** Experiments 1 and 2 on YouTube and Instagram. Dean posted
   Experiment 2's Reel from his phone (the API failed because it's over

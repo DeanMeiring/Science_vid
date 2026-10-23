@@ -136,6 +136,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
           <button class="go yt" id="post-yt">▶ Post to YouTube</button>
           <button class="go ig" id="post-ig">◎ Post to Instagram</button>
           <button class="go dl" id="download">⬇ Download video (for TikTok)</button>
+          <button class="go dl" id="copy-tt">⧉ Copy title + description (for TikTok)</button>
         </div>
         <div class="posted" id="posted"></div>
         <div class="log" id="log"></div>
@@ -222,7 +223,7 @@ function buttons() {
   $('post-ig').disabled = busy || !ready || !S.instagram.connected;
   $('post-yt').title = !ready ? 'Wait for the full-size video' : !S.youtube.connected ? 'Connect YouTube first' : '';
   $('post-ig').title = !ready ? 'Wait for the full-size video' : !S.instagram.connected ? 'Connect Instagram first' : '';
-  $('download').disabled = !ready;
+  $('download').disabled = !ready; $('copy-tt').disabled = !cur;
   $('download').title = ready ? 'Save the mp4, e.g. to post on TikTok from your phone' : 'Wait for the full-size video';
 }
 
@@ -289,6 +290,14 @@ $('privacy').onclick = e => { const b = e.target.closest('button'); if (!b) retu
   $('sched-box').style.display = privacy === 'schedule' ? 'block' : 'none'; };
 $('post-both').onclick = () => post(['youtube', 'instagram']);
 $('download').onclick = () => { if (cur) window.location.href = '/download/' + encodeURIComponent(cur.name); };
+$('copy-tt').onclick = async () => {        // title, a blank line, the description (YouTube's #Shorts tag left out)
+  const text = ($('title').value.trim() + '
+
+' + $('desc').value.trim()).replace(/[ 	]*#shorts/gi, '').trim();
+  try { await navigator.clipboard.writeText(text); }
+  catch { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+  const b = $('copy-tt'), was = b.textContent; b.textContent = '✓ Copied'; setTimeout(() => b.textContent = was, 1500);
+};
 $('post-yt').onclick = () => post(['youtube']);
 $('post-ig').onclick = () => post(['instagram']);
 const q = new URLSearchParams(location.search);

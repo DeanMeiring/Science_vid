@@ -23,6 +23,9 @@
 - **Done for the day after Experiment 5** (Dean: "finish up for today, will continue tomorrow").
   Next, when Dean asks: Experiment 6, "three barns, one prize" (Monty Hall), as Experiment 5's
   last line promises; check the facts by simulation first. Idea from a comment: "Get 3 helpers".
+- **Next: Experiment 8, "Get 3 helpers"** (Dean picked it, 23 Oct; a viewer's comment on Experiment 4):
+  Joe and three helpers on one field, the same rule as Experiment 1. Find the story by simulation
+  first; open on an "If you..." hook; reuse the backdrop, Kenney models and Joe's arms.
 - **Experiment 7: pi from a bale of hay** (started 23 Oct, Dean: "yes start experiment 7").
   Branch `claude/episode-7-pi` (stacked on `claude/episode-6-barns`). `pipeline/hay.py` is the sim
   (straws one board wide dropped at random; crossing rate 63.6% vs 2/pi 63.66%); seed 1:

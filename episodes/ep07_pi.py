@@ -12,25 +12,35 @@ Facts checked (Oct 2026):
 - Our simulation (pipeline/hay.py, seed 1): 63.6% of 100,000 straws cross (2/pi = 63.66%);
   10 straws -> 2.50, 100 -> 2.99, 1,000 -> 3.03, 10,000 -> 3.13, 100,000 -> 3.143.
 - It only gets CLOSER to pi with more straws (slowly); never claimed to be exact.
+- "Before tractors": the first tractors (steam) came in the 19th century, after Buffon (18th).
+- Hay is dried grass (true); "the sun did" the drying (field-dried hay); jokes, but not wrong.
 """
 
 EXPERIMENT = 7
 THEME = "farm"
 # VOICE: Farmer Joe's default (pocket:george)
 
+# Dean (23 Oct): "Captain Obvious" Joe -- the same voice, but deadpan, short sentences, over-explaining the
+# obvious. The maths and the numbers stay exactly as checked.
 NARRATION = [
-    ("setup",  "Experiment number 7: I'm finding pi... with hay! My floorboards are exactly one straw wide. "
-               "I drop a straw. Does it land across a crack? This one does. This one doesn't.",
-               "Experiment number seven: I'm finding pie... with hay! My floorboards are exactly one straw wide. "
-               "I drop a straw. Does it land across a crack? This one does. This one doesn't."),
-    ("trick",  "Here's the trick: two times the straws, divided by the ones that cross, gets closer and closer to pi.",
-               "Here's the trick: two times the straws, divided by the ones that cross, gets closer and closer to pie."),
-    ("count",  "Ten straws: 2.5. A hundred: 2.99. A thousand: 3.03. A hundred thousand straws... 3.14!",
-               "Ten straws: two point five. A hundred: two point nine nine. A thousand: three point oh three. "
+    ("setup",  "Experiment number 7. I'm finding pi. With hay. This is hay. It's dried grass. I did not dry it. "
+               "The sun did. Between the boards: cracks. That's where cracks go. Each board is one straw wide. "
+               "I checked. Twice.",
+               "Experiment number seven. I'm finding pie. With hay. This is hay. It's dried grass. I did not dry it. "
+               "The sun did. Between the boards: cracks. That's where cracks go. Each board is one straw wide. "
+               "I checked. Twice."),
+    ("throw",  "I throw a straw. It lands across a crack. Gold. I throw another. It doesn't. Not gold. Still a straw.", None),
+    ("trick",  "Now the trick: two times all the straws, divided by the gold ones, gets closer and closer to pi. "
+               "Not the pie you eat. Daisy. Daisy, no.",
+               "Now the trick: two times all the straws, divided by the gold ones, gets closer and closer to pie. "
+               "Not the pie you eat. Daisy. Daisy, no."),
+    ("count",  "Ten straws: 2.5. Wrong. A hundred: 2.99. Closer. A thousand: 3.03. A hundred thousand straws... 3.14!",
+               "Ten straws: two point five. Wrong. A hundred: two point nine nine. Closer. A thousand: three point oh three. "
                "A hundred thousand straws... three point one four!"),
-    ("end",    "A French count named Buffon worked this out in the 1700s. Pi, hiding in my hay! See y'all next harvest!",
-               "A French count named Buffon worked this out in the seventeen hundreds. Pie, hiding in my hay! "
-               "See y'all next harvest!"),
+    ("end",    "I did not plan the mountain. A guy named Buffon worked this out in the 1700s. Before tractors. "
+               "See y'all next harvest!",
+               "I did not plan the mountain. A guy named Buffon worked this out in the seventeen hundreds. "
+               "Before tractors. See y'all next harvest!"),
 ]
 
 STRAWS = dict(seed=1, n=100000)

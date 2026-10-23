@@ -112,10 +112,14 @@ def add_clouds(sc, cx, cy, n=7, seed=3):
 def add_backdrop(sc, cx, cy, yard=None, use_kenney=False):
     """All of it round a yard centred on (cx, cy). yard: (x0, y0, x1, y1) of the working area (kept
     clear of trees, fenced at the back and sides). use_kenney: Kenney's trees, bushes, flowers and
-    rocks instead of the home-made trees (needs the kits in assets/thirdparty/kenney)."""
+    rocks instead of the home-made trees (needs the kits in assets/thirdparty/kenney); "detailed": our
+    detailed trees with Kenney's bushes and flowers."""
     sky_gradient(sc); add_hills(sc, cx, cy); add_clouds(sc, cx, cy)
     clear = yard and (yard[0] - 6, yard[1] - 14, yard[2] + 6, yard[3] + 30)
-    if use_kenney:
+    if use_kenney == "detailed":                                   # our detailed trees, Kenney's bushes and flowers
+        detailed_trees(cx, cy, keep_clear=clear)
+        if yard: kenney_dressing(cx, cy, yard)
+    elif use_kenney:
         kenney_trees(cx, cy, keep_clear=clear)
         if yard: kenney_dressing(cx, cy, yard)
     else: add_trees(sc, cx, cy, keep_clear=clear)
@@ -189,3 +193,96 @@ def kenney_dressing(cx, cy, yard, seed=4):
         nm = small[int(r.integers(0, len(small)))]
         kenney(nm, x, y, rot=r.uniform(0, 2 * math.pi), scale=r.uniform(2.0, 3.2) if "flower" in nm or "grass" in nm else r.uniform(1.8, 2.6))
     kenney("log_stackLarge", x0 + 3, y0 - 1.2, rot=0.1, scale=2.5)
+
+
+# ---------------- detailed trees (Dean, 23 Oct: "make the trees a bit more detailed") ----------------
+def _bark():
+    if "BarkDetailed" in bpy.data.materials: return bpy.data.materials["BarkDetailed"]
+    mat, b = S._material("BarkDetailed", S.lin((112, 78, 50)), rough=0.95); nt = mat.node_tree
+    tc = S._node(nt, "ShaderNodeTexCoord")
+    mp = S._node(nt, "ShaderNodeMapping"); mp.inputs["Scale"].default_value = (6.0, 6.0, 1.2)       # long vertical grain
+    nt.links.new(tc.outputs["Object"], mp.inputs["Vector"])
+    nz = S._node(nt, "ShaderNodeTexNoise"); nz.inputs["Scale"].default_value = 4.0; nz.inputs["Detail"].default_value = 8.0
+    nt.links.new(mp.outputs["Vector"], nz.inputs["Vector"])
+    nt.links.new(S._mix(nt, nz.outputs["Fac"], S.lin((70, 48, 30)), S.lin((132, 96, 64))), b.inputs["Base Color"])
+    bump = S._node(nt, "ShaderNodeBump"); bump.inputs["Strength"].default_value = 0.8
+    nt.links.new(nz.outputs["Fac"], bump.inputs["Height"]); nt.links.new(bump.outputs["Normal"], b.inputs["Normal"])
+    return mat
+
+def _leaves(k):
+    """Leaf material k (0-2): a green with leafy speckle and bumps, each a slightly different shade."""
+    name = f"LeavesDetailed{k}"
+    if name in bpy.data.materials: return bpy.data.materials[name]
+    base = [(70, 138, 56), (88, 154, 62), (60, 120, 50)][k]
+    mat, b = S._material(name, S.lin(base), rough=0.8); nt = mat.node_tree
+    tc = S._node(nt, "ShaderNodeTexCoord")
+    vo = S._node(nt, "ShaderNodeTexVoronoi"); vo.inputs["Scale"].default_value = 9.0           # leaf-sized cells
+    nt.links.new(tc.outputs["Object"], vo.inputs["Vector"])
+    nz = S._node(nt, "ShaderNodeTexNoise"); nz.inputs["Scale"].default_value = 2.0
+    nt.links.new(tc.outputs["Object"], nz.inputs["Vector"])
+    col = S._mix(nt, vo.outputs["Distance"], S.lin(tuple(min(255, int(v * 1.25)) for v in base)), S.lin(tuple(int(v * 0.7) for v in base)))
+    col = S._mix(nt, nz.outputs["Fac"], col, S.lin(tuple(min(255, int(v * 1.1)) for v in base)))
+    nt.links.new(col, b.inputs["Base Color"])
+    bump = S._node(nt, "ShaderNodeBump"); bump.inputs["Strength"].default_value = 0.6
+    nt.links.new(vo.outputs["Distance"], bump.inputs["Height"]); nt.links.new(bump.outputs["Normal"], b.inputs["Normal"])
+    return mat
+
+def _tapered(a, b, r0, r1, m, parent=None):
+    """A tapering branch from a (radius r0) to b (radius r1)."""
+    from mathutils import Vector
+    a, b = Vector(a), Vector(b); v = b - a
+    bpy.ops.mesh.primitive_cone_add(radius1=r0, radius2=r1, depth=v.length, vertices=10, location=(a + b) / 2)
+    o = bpy.context.object; o.rotation_euler = v.to_track_quat("Z", "Y").to_euler(); o.data.materials.append(m)
+    o.parent = parent; bpy.ops.object.shade_smooth()
+    return o
+
+def _blob(loc, r, m, parent):
+    """A leaf cluster: a lumpy, bumpy ball."""
+    bpy.ops.mesh.primitive_ico_sphere_add(radius=r, subdivisions=3, location=loc); o = bpy.context.object
+    tex = bpy.data.textures.get("LeafLumps") or bpy.data.textures.new("LeafLumps", "CLOUDS")
+    tex.noise_scale = 0.35
+    d = o.modifiers.new("Lumps", "DISPLACE"); d.texture = tex; d.strength = r * 0.35; d.mid_level = 0.5
+    d.texture_coords = "OBJECT"
+    o.data.materials.append(m); o.parent = parent; bpy.ops.object.shade_smooth()
+    o["leaf_r"] = r                                   # so fruit can be hung on its surface
+    return o
+
+def add_detailed_tree(x, y, size=3.0, kind="round", seed=0):
+    """A more detailed tree: a flared, tapering trunk with branches and a canopy of lumpy leaf clusters
+    (round), or a pine of ragged layered tiers. About `size` squares tall. Returns its root (an empty)."""
+    r = np.random.default_rng(seed); bark = _bark()
+    root = bpy.data.objects.new("Tree", None); bpy.context.scene.collection.objects.link(root)
+    root.location = (x + 0.5, -(y + 0.5), 0); root.rotation_euler = (0, 0, r.uniform(0, 6.3)); root.scale = (size / 3.0,) * 3
+    if kind == "pine":
+        _tapered((0, 0, 0), (0, 0, 3.0), 0.16, 0.03, bark, root)
+        for i in range(5):
+            z = 0.7 + i * 0.48; rad = 1.05 - i * 0.18
+            bpy.ops.mesh.primitive_cone_add(radius1=rad, radius2=0.02, depth=0.9, vertices=14, location=(0, 0, z + 0.35))
+            o = bpy.context.object; o.parent = root; o.data.materials.append(_leaves(2))
+            for v in o.data.vertices:                              # ragged edges: tips pulled out and down
+                if v.co.z < 0 and (v.index % 2): v.co.x *= 1.18; v.co.y *= 1.18; v.co.z -= 0.08
+        return root
+    _tapered((0, 0, 0), (0, 0, 0.35), 0.32, 0.2, bark, root)          # the flared foot
+    top = (r.uniform(-0.1, 0.1), r.uniform(-0.1, 0.1), 1.6)
+    _tapered((0, 0, 0.3), top, 0.2, 0.12, bark, root)
+    tips = []
+    for k in range(4):                                                  # main branches
+        a = k * math.pi / 2 + r.uniform(-0.4, 0.4); h = r.uniform(1.1, 1.5)
+        tip = (0.75 * math.cos(a), 0.75 * math.sin(a), h + r.uniform(0.5, 0.8))
+        _tapered((top[0] * 0.7, top[1] * 0.7, h), tip, 0.09, 0.03, bark, root); tips.append(tip)
+    tips.append((top[0], top[1], 2.4))
+    for k, t in enumerate(tips):                                        # leaf clusters round each branch end
+        for j in range(4):
+            off = r.normal(0, 0.28, 3)
+            _blob((t[0] + off[0], t[1] + off[1], t[2] + abs(off[2]) * 0.6), r.uniform(0.45, 0.62), _leaves(int(r.integers(0, 3))), root)
+    return root
+
+def detailed_trees(cx, cy, n=22, r0=16, r1=45, keep_clear=None, seed=2):
+    """Detailed trees scattered round (cx, cy), mostly behind and to the sides (like add_trees)."""
+    r = np.random.default_rng(seed); placed = 0
+    while placed < n:
+        a = r.uniform(-math.pi * 0.95, -math.pi * 0.05) if r.random() < 0.8 else r.uniform(0, 2 * math.pi)
+        d = r.uniform(r0, r1); x, y = cx + d * math.cos(a), cy + d * math.sin(a)
+        if keep_clear and keep_clear[0] <= x <= keep_clear[2] and keep_clear[1] <= y <= keep_clear[3]: continue
+        add_detailed_tree(x, y, size=r.uniform(4.0, 6.5), kind="pine" if r.random() < 0.35 else "round", seed=placed + 100)
+        placed += 1

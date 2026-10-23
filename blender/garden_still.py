@@ -28,7 +28,7 @@ import bpy
 
 c = N // 2
 sc = S.Scene("farm", scale=args.scale)
-SC.add_backdrop(sc, c, c - 3, yard=(c - 16, c - 22, c + 14, c + 8), use_kenney=True); SC.add_silo(sc, c - 17, c - 8)
+SC.add_backdrop(sc, c, c - 3, yard=(c - 16, c - 22, c + 14, c + 8), use_kenney="detailed"); SC.add_silo(sc, c - 17, c - 8)
 sc.add_barn(c - 13, c - 3, facing=-math.pi / 3)
 GP.add_bed(c - 3, c - 1, 8, 3)
 grid = np.zeros((N, N), np.uint8); grid[c - 1:c + 2, c - 3:c + 5] = 1           # no grass tufts on the bed

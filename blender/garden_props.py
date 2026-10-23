@@ -59,19 +59,25 @@ def add_mustard(x, y, seed=1):
     root.scale = (0.001,) * 3
     return root
 
-def add_apple_tree(x, y, apple_rgb=(140, 200, 70), seed=2, size=3.2):
+def add_apple_tree(x, y, apple_rgb=(176, 222, 64), seed=2, size=3.2):
     """Kenney's oak with apples hung round its canopy (green by default: not the same apple as the
     red one Joe planted). Returns dict(root, apples); scale root to grow it."""
     r = np.random.default_rng(seed)
     root = _root("AppleTree", x, y)
-    t = SC.kenney("tree_oak", 0, 0, scale=size); t.parent = root; t.location = (0, 0, 0)
+    t = SC.add_detailed_tree(0, 0, size=size, seed=seed); t.parent = root; t.location = (0, 0, 0)
     apple = _mat(f"Apple{apple_rgb}", apple_rgb, 0.35)
+    # hang apples on the outside of the leaf clusters (in the tree's own coordinates)
+    blobs = [o for o in t.children if "leaf_r" in o]
     apples = []
-    for k in range(26):                                          # on the canopy's surface (roughly)
-        a, e = r.uniform(0, 2 * math.pi), r.uniform(-0.2, 0.9)
-        rad = 0.42 * size
-        c = (rad * math.cos(a) * math.cos(e), rad * math.sin(a) * math.cos(e), 0.62 * size + 0.3 * size * math.sin(e))
-        apples.append(_sphere(c, 0.07 * size / 3.2 * 1.3, apple, root, seg=10))
+    for k in range(40):
+        b = blobs[int(r.integers(0, len(blobs)))]
+        out = Vector((b.location.x, b.location.y, 0))
+        out = out.normalized() if out.length > 1e-3 else Vector((1, 0, 0))
+        tilt = r.uniform(-0.9, 0.5); spin = r.uniform(-1.0, 1.0)
+        d = Vector((out.x * math.cos(spin) - out.y * math.sin(spin), out.x * math.sin(spin) + out.y * math.cos(spin), 0))
+        d = Vector((d.x * math.cos(tilt), d.y * math.cos(tilt), math.sin(tilt)))
+        pos = b.location + d * b["leaf_r"] * 0.95
+        apples.append(_sphere(tuple(pos), 0.11, apple, t, seg=10))
     root.scale = (0.001,) * 3
     return dict(root=root, apples=apples)
 

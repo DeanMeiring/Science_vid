@@ -72,6 +72,21 @@ def load_timeline(episode_dir):
     nf = int(tm["duration"] * FPS)
     return tm["lines"], tm["duration"], nf, schedule(tm["lines"], nf)
 
+def gentle():
+    """Below-normal priority for this process (and the ffmpeg it starts, which inherits it), so
+    composing doesn't max out the laptop (Dean, 23 Oct 2026: "relax, the laptop is going crazy")."""
+    import sys
+    if sys.platform == "win32":
+        import ctypes
+        k32 = ctypes.windll.kernel32
+        k32.GetCurrentProcess.restype = ctypes.c_void_p
+        k32.SetPriorityClass.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+        k32.SetPriorityClass(k32.GetCurrentProcess(), 0x4000)   # BELOW_NORMAL_PRIORITY_CLASS
+    else:
+        os.nice(10)
+
+FFMPEG_THREADS = ["-threads", "4"]   # encoding with every core made the fans roar
+
 def ffmpeg():
     """ffmpeg on PATH, or where winget puts it (PATH only updates in new terminals)."""
     import shutil

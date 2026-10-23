@@ -11,7 +11,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "pipeline"))
-from common import FPS, ffmpeg
+from common import FPS, ffmpeg, FFMPEG_THREADS, gentle
+gentle()
 
 D = ROOT / "renders" / "ep06_barns"; FR = D / "sample_frames"
 SCREEN = {int(k): v for k, v in json.loads((FR / "screen.json").read_text()).items()}
@@ -35,7 +36,7 @@ def arrow(dr, a, b, fill=WHITE, w=7):
         dr.line(pts, fill=col, width=ww, joint="curve"); dr.line(head, fill=col, width=ww, joint="curve")
 
 ff = subprocess.Popen([ffmpeg(), "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
-                       "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "medium", "-crf", "19",
+                       "-r", str(FPS), "-i", "-", *FFMPEG_THREADS, "-c:v", "libx264", "-preset", "medium", "-crf", "19",
                        "-pix_fmt", "yuv420p", str(D / "sample.mp4")], stdin=subprocess.PIPE)
 for f in range(NF):
     tt = f / FPS; sp = SCREEN[f]

@@ -13,7 +13,8 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import FPS, ROOT, ffmpeg
+from common import FPS, ROOT, ffmpeg, FFMPEG_THREADS, gentle
+gentle()
 from ep06_timeline import LEAD, Timeline
 import farm_overview as FO
 
@@ -103,7 +104,7 @@ LABEL_T = {6: T_PULL + 0.4, 5: T_PULL + 0.8, 4: T_PULL + 1.1, 1: T_PULL + 1.4, 2
 
 # ---------------- video ----------------
 ff = subprocess.Popen([ffmpeg(), "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
-                       "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "medium", "-crf", "19",
+                       "-r", str(FPS), "-i", "-", *FFMPEG_THREADS, "-c:v", "libx264", "-preset", "medium", "-crf", "19",
                        "-pix_fmt", "yuv420p", str(D / "_v.mp4")], stdin=subprocess.PIPE)
 src_i, base_f, base, thumb = 0, -1, None, None
 for f in range(tl.nf):

@@ -14,7 +14,8 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import FPS, ROOT, ffmpeg, load_episode, load_timeline, simulate
+from common import FPS, ROOT, ffmpeg, load_episode, load_timeline, simulate, FFMPEG_THREADS, gentle
+gentle()
 
 ap = argparse.ArgumentParser()
 ap.add_argument("episode")
@@ -138,7 +139,7 @@ def title_fn(alpha):
 
 # ---------------- video ----------------
 ff = subprocess.Popen([ffmpeg(), "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
-                       "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "medium", "-crf", "19",
+                       "-r", str(FPS), "-i", "-", *FFMPEG_THREADS, "-c:v", "libx264", "-preset", "medium", "-crf", "19",
                        "-pix_fmt", "yuv420p", str(ep_dir / "_v.mp4")], stdin=subprocess.PIPE)
 r0, r1 = ep.RULE_LINES
 hl = lines[ep.HIGHWAY_LINE] if getattr(ep, "HIGHWAY", None) else None    # the highway moment, if there is one

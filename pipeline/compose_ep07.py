@@ -14,7 +14,8 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import FPS, ROOT, ffmpeg
+from common import FPS, ROOT, ffmpeg, FFMPEG_THREADS, gentle
+gentle()
 from ep07_timeline import LEAD, Timeline
 import farm_overview as FO
 
@@ -78,7 +79,12 @@ for i, c in enumerate(chunks):
     t1 = chunks[i + 1][0]["t0"] + LEAD - 0.05 if i + 1 < len(chunks) else c[-1]["t1"] + LEAD + 0.8
     spans.append((t0, min(t1, c[-1]["t1"] + LEAD + 0.9), c))
 F_CAP = HAND(84)
+def onscreen(w):
+    """The word as captioned: "pi" becomes the symbol (Dean); "pie" (the one you eat) stays a word."""
+    core = w.strip(".,:;!?'\"")
+    return w.replace(core, "π") if core.lower() == "pi" else w
 def caption_fn(words, active):
+    words = [onscreen(w) for w in words]
     def fn(dr):
         rows, row = [], []
         for i, w in enumerate(words):
@@ -122,7 +128,7 @@ B0, B1 = tl.win["blur"]
 
 # ---------------- video ----------------
 ff = subprocess.Popen([ffmpeg(), "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
-                       "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "medium", "-crf", "19",
+                       "-r", str(FPS), "-i", "-", *FFMPEG_THREADS, "-c:v", "libx264", "-preset", "medium", "-crf", "19",
                        "-pix_fmt", "yuv420p", str(D / "_v.mp4")], stdin=subprocess.PIPE)
 src_i, base_f, base, thumb, prev = 0, -1, None, None, []
 for f in range(tl.nf):

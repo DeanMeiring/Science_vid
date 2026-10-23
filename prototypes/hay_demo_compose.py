@@ -11,7 +11,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "pipeline"))
-from common import FPS, ffmpeg
+from common import FPS, ffmpeg, FFMPEG_THREADS, gentle
+gentle()
 
 D = ROOT / "renders" / "ep07_pi"; FR = D / "demo_frames"
 SCREEN = {int(k): v for k, v in json.loads((FR / "screen.json").read_text()).items()}
@@ -29,7 +30,7 @@ def pop(tt, t0, t1, rise=0.15): return float(np.clip(min((tt - t0) / rise, (t1 -
 
 
 ff = subprocess.Popen([ffmpeg(), "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
-                       "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "medium", "-crf", "19",
+                       "-r", str(FPS), "-i", "-", *FFMPEG_THREADS, "-c:v", "libx264", "-preset", "medium", "-crf", "19",
                        "-pix_fmt", "yuv420p", str(D / "demo.mp4")], stdin=subprocess.PIPE)
 prev = 0; landings = []
 for f in range(NF):

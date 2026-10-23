@@ -14,7 +14,8 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "pipeline"))
-from common import FPS, ffmpeg
+from common import FPS, ffmpeg, FFMPEG_THREADS, gentle
+gentle()
 
 D = ROOT / "renders" / "ep05_crops"; FR = D / "sample_frames"
 SCREEN = {int(k): v for k, v in json.loads((FR / "screen.json").read_text()).items()}
@@ -43,7 +44,7 @@ def mirror_line(arr, sp, strength):
     return arr * (1 - a) + np.array([255, 250, 225], np.float32) * a
 
 ff = subprocess.Popen([ffmpeg(), "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
-                       "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-preset", "medium", "-crf", "19",
+                       "-r", str(FPS), "-i", "-", *FFMPEG_THREADS, "-c:v", "libx264", "-preset", "medium", "-crf", "19",
                        "-pix_fmt", "yuv420p", str(D / "sample.mp4")], stdin=subprocess.PIPE)
 last_flash = -9.0
 for f in range(NF):

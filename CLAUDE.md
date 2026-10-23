@@ -36,7 +36,14 @@
   our own combine: no John Deere colours). Every straw is the simulation's; counted on the planks,
   then hops onto the heap (Dean asked why it didn't go onto the pile: it must land on the planks to
   count). 2nd throw shows a pale straw from the first ten (counts at 10/100/... unchanged). Joe now
-  has shoulder joints (`set_walker(arms=..., tool=False)`, `hand_position`). Not posted yet.
+  has shoulder joints (`set_walker(arms=..., tool=False)`, `hand_position`). Captions show the π symbol.
+  **Posted 23 Oct 13:56** to both: YouTube https://youtube.com/shorts/wxQgNbzltts and Instagram
+  https://www.instagram.com/reel/De1gJe5j6hO/
+- **YouTube "not shown in feed" (23 Oct):** none of the 7 Shorts are shown in the Shorts feed. Checked via
+  the API: all public, processed, not made for kids, no rejection, viewable logged out (so not the
+  "unaudited API project uploads are locked private" rule). Dean checked: phone-verified, feature
+  eligibility on, audience not made for kids, no warnings. Suggested test: upload the next one to
+  YouTube from the phone (studio Download button) and compare "Shown in feed".
 - **Third-party 3D assets:** Kenney (CC0, nature + survival kits) in `assets/thirdparty/kenney`,
   loaded by `scenery.kenney()`, teal recoloured to farm greens. Quaternius: free commercial use but
   their licence forbids redistributing the files; downloads need a click on their site. Everything in

@@ -173,3 +173,50 @@ class Straws:
         old = self.obj.data
         self.obj.data = S._points_mesh("Straws", pts, dict(scale=np.ones((n, 3)), rot=rot, paint=rgb, glow=glow))
         bpy.data.meshes.remove(old)
+
+def add_haystack(sc, x, y, radius, height, seed=4):
+    """A haystack (or a hay mountain): a lumpy mound of hay with gold flecks (the straws that crossed)
+    and pale ones, centred on grid (x, y), sitting on the floor. Scale it with set_haystack."""
+    if "HayHeap" not in bpy.data.materials:
+        mat, b = S._material("HayHeap", S.lin((226, 196, 120)), rough=0.9); nt = mat.node_tree
+        tc = S._node(nt, "ShaderNodeNewGeometry")                  # world position: the same fine straw however big the heap
+        st = S._node(nt, "ShaderNodeTexWave", wave_type="BANDS"); st.inputs["Scale"].default_value = 6.0
+        st.inputs["Distortion"].default_value = 14.0; st.inputs["Detail"].default_value = 6.0
+        nt.links.new(tc.outputs["Position"], st.inputs["Vector"])                # tangled straw streaks
+        fl = S._node(nt, "ShaderNodeTexNoise"); fl.inputs["Scale"].default_value = 34.0
+        nt.links.new(tc.outputs["Position"], fl.inputs["Vector"])
+        ramp = S._node(nt, "ShaderNodeValToRGB"); ramp.color_ramp.elements[0].position = 0.5; ramp.color_ramp.elements[1].position = 0.56
+        nt.links.new(fl.outputs["Fac"], ramp.inputs["Fac"])                       # about 6 in 10 flecks gold
+        base = S._mix(nt, st.outputs["Fac"], S.lin((226, 192, 112)), S.lin((250, 236, 190)))
+        col = S._mix(nt, ramp.outputs["Color"], S.lin((255, 190, 50)), base)
+        nt.links.new(col, b.inputs["Base Color"]); nt.links.new(col, b.inputs["Emission Color"])
+        em = S._node(nt, "ShaderNodeMath", operation="MULTIPLY"); em.inputs[1].default_value = 0.35
+        inv = S._node(nt, "ShaderNodeMath", operation="SUBTRACT"); inv.inputs[0].default_value = 1.0
+        nt.links.new(ramp.outputs["Color"], inv.inputs[1]); nt.links.new(inv.outputs[0], em.inputs[0])
+        nt.links.new(em.outputs[0], b.inputs["Emission Strength"])               # the gold flecks glow a little
+        bump = S._node(nt, "ShaderNodeBump"); bump.inputs["Strength"].default_value = 0.15
+        nt.links.new(st.outputs["Fac"], bump.inputs["Height"]); nt.links.new(bump.outputs["Normal"], b.inputs["Normal"])
+    # a unit mound: radius 1, height 1, slumped like a real heap, a little lumpy
+    r = np.random.default_rng(seed); bm = bmesh.new(); R, A = 24, 48
+    lump = r.normal(0, 1, (R + 1, A))
+    verts = [[None] * A for _ in range(R + 1)]
+    top = bm.verts.new((0, 0, 1.0))
+    for i in range(1, R + 1):
+        rr = i / R
+        for j in range(A):
+            a = 2 * math.pi * j / A; k = 1 + 0.05 * lump[i, j] * rr
+            z = max(0.0, (1 - rr ** 1.7) ** 0.9) * (1 + 0.04 * lump[i, (j + 7) % A])
+            verts[i][j] = bm.verts.new((rr * k * math.cos(a), rr * k * math.sin(a), z))
+    for j in range(A): bm.faces.new((top, verts[1][j], verts[1][(j + 1) % A]))
+    for i in range(1, R):
+        for j in range(A): bm.faces.new((verts[i][j], verts[i + 1][j], verts[i + 1][(j + 1) % A], verts[i][(j + 1) % A]))
+    me = bpy.data.meshes.new("Haystack"); bm.to_mesh(me); bm.free()
+    for f_ in me.polygons: f_.use_smooth = True
+    me.materials.append(bpy.data.materials["HayHeap"])
+    o = bpy.data.objects.new("Haystack", me); sc.sc.collection.objects.link(o)
+    o.location = (x + 0.5, -(y + 0.5), FLOOR_Z); o.scale = (radius, radius, height)
+    return o
+
+def heap_size(n, r_full=12.0, n_full=100000):
+    """Radius and height of the heap after n straws (its volume grows with the straws)."""
+    rad = r_full * (n / n_full) ** (1 / 3); return rad, rad * 1.0

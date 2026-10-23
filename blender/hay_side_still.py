@@ -22,6 +22,7 @@ argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 ap = argparse.ArgumentParser()
 ap.add_argument("--shot", default="first", choices=["first", "heap", "mountain"])
 ap.add_argument("--scale", type=int, default=50)
+ap.add_argument("--kenney", action="store_true", help="Kenney's trees, bushes and flowers round the yard")
 args = ap.parse_args(argv)
 S.gentle()
 import bpy
@@ -30,7 +31,7 @@ from mathutils import Vector
 
 c = N // 2
 sc = S.Scene("farm", scale=args.scale)
-SC.add_backdrop(sc, c, c - 3, yard=(c - 16, c - 22, c + 14, c + 8))   # hills, trees, fence, clouds, sky
+SC.add_backdrop(sc, c, c - 3, yard=(c - 16, c - 22, c + 14, c + 8), use_kenney=args.kenney)   # hills, trees, fence, clouds, sky
 SC.add_silo(sc, c - 17, c - 8)
 daisy = sc.add_character("sheep")
 HP.add_floor(sc, c - 8, c - 4, 16, 10)                          # the plank floor, out in the yard
@@ -58,6 +59,6 @@ cam = {"first": (c + 0.4, c + 2.6, 260.0, 12.0, 0.75, -20.0), "heap": (c + 0.5, 
 grid = np.zeros((N, N), np.uint8); grid[c - 4:c + 6, c - 8:c + 8] = 1         # no grass tufts on the planks
 sc.set_tufts(grid, cam[0], cam[1], cam[2]); sc.set_floor(cam[2])
 sc.set_camera(cam[0], cam[1], cam[2], cam[5], cam[3], cam[4])
-out = ROOT / "renders" / "ep07_pi" / f"side_{args.shot}.png"
+out = ROOT / "renders" / "ep07_pi" / f"side_{args.shot}{'_kenney' if args.kenney else ''}.png"
 sc.render(out, "PNG")
 print("saved", out, f"straws {n:,}, heap radius {rad:.1f}, height {hgt:.1f}", flush=True)

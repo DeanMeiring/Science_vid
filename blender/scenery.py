@@ -6,6 +6,7 @@ Grid squares as in scene.py (x right, y towards the camera; the camera usually l
 so "behind" means smaller y). Everything here is decoration: nothing the experiments count.
 """
 import math
+from pathlib import Path
 import bpy
 import numpy as np
 import scene as S
@@ -108,9 +109,83 @@ def add_clouds(sc, cx, cy, n=7, seed=3):
                                                   location=(x + r.uniform(-7, 7), -(y + r.uniform(-2, 2)), z + r.uniform(-1, 2)))
             o = bpy.context.object; o.scale = (1.3, 1, 0.6); o.data.materials.append(white); bpy.ops.object.shade_smooth()
 
-def add_backdrop(sc, cx, cy, yard=None):
+def add_backdrop(sc, cx, cy, yard=None, use_kenney=False):
     """All of it round a yard centred on (cx, cy). yard: (x0, y0, x1, y1) of the working area (kept
-    clear of trees, fenced at the back and sides)."""
+    clear of trees, fenced at the back and sides). use_kenney: Kenney's trees, bushes, flowers and
+    rocks instead of the home-made trees (needs the kits in assets/thirdparty/kenney)."""
     sky_gradient(sc); add_hills(sc, cx, cy); add_clouds(sc, cx, cy)
-    add_trees(sc, cx, cy, keep_clear=yard and (yard[0] - 6, yard[1] - 14, yard[2] + 6, yard[3] + 30))
+    clear = yard and (yard[0] - 6, yard[1] - 14, yard[2] + 6, yard[3] + 30)
+    if use_kenney:
+        kenney_trees(cx, cy, keep_clear=clear)
+        if yard: kenney_dressing(cx, cy, yard)
+    else: add_trees(sc, cx, cy, keep_clear=clear)
     if yard: add_fence(sc, yard[0] - 2, yard[1] - 2, yard[2] + 2, yard[3] + 2)
+
+# ---------------- Kenney's CC0 models (assets/thirdparty/kenney, never committed) ----------------
+KENNEY = Path(__file__).resolve().parent.parent / "assets" / "thirdparty" / "kenney"
+_kenney_cache = {}
+
+def _farm_colours(m):
+    """Kenney's kit is teal and orange; turn its teal (leaves, grass) into the farm's greens."""
+    import colorsys
+    if not m or not m.use_nodes or getattr(m, "_farmed", False): return
+    for n in m.node_tree.nodes:
+        if n.type != "BSDF_PRINCIPLED": continue
+        r, g, b, a = n.inputs["Base Color"].default_value
+        h, s_, v = colorsys.rgb_to_hsv(r, g, b)
+        if 0.38 <= h <= 0.58 and s_ > 0.2:                       # teal / cyan -> leaf green
+            n.inputs["Base Color"].default_value = (*colorsys.hsv_to_rgb(0.29 + (h - 0.48) * 0.3, min(1, s_ * 1.1), v * 0.9), a)
+
+def kenney(name, x, y, rot=0.0, scale=1.0, z=0.0, kit="nature"):
+    """Place one of Kenney's models (by file name without .glb, e.g. "tree_oak", "barrel") at grid
+    (x, y). The model is imported once; later copies share its mesh. Returns the new object."""
+    if name not in _kenney_cache:
+        folder = KENNEY / ("nature/Models/GLTF format" if kit == "nature" else "survival/Models/GLB format")
+        path = folder / f"{name}.glb"
+        if not path.exists(): raise FileNotFoundError(f"{path} (download the Kenney kits into assets/thirdparty/kenney)")
+        before = set(bpy.data.objects)
+        bpy.ops.import_scene.gltf(filepath=str(path))
+        new = [o for o in bpy.data.objects if o not in before]
+        meshes = [o for o in new if o.type == "MESH"]
+        bpy.ops.object.select_all(action="DESELECT")
+        for o in meshes: o.select_set(True)
+        bpy.context.view_layer.objects.active = meshes[0]
+        for o in meshes:                                   # bake parents' transforms in, then join into one mesh
+            mw = o.matrix_world.copy(); o.parent = None; o.matrix_world = mw
+        if len(meshes) > 1: bpy.ops.object.join()
+        src = bpy.context.view_layer.objects.active
+        for o in new:
+            if o != src and o.name in bpy.data.objects: bpy.data.objects.remove(o)
+        src.name = f"K_{name}"; src.hide_render = True; src.hide_viewport = True
+        for m in src.data.materials: _farm_colours(m)
+        _kenney_cache[name] = src
+    src = _kenney_cache[name]
+    o = bpy.data.objects.new(f"{name}", src.data); sc_ = bpy.context.scene; sc_.collection.objects.link(o)
+    o.location = (x + 0.5, -(y + 0.5), z); o.rotation_euler = (0, 0, rot); o.scale = (scale,) * 3
+    return o
+
+def kenney_trees(cx, cy, n=22, r0=16, r1=45, keep_clear=None, seed=2):
+    """Kenney's trees scattered round (cx, cy), mostly behind and to the sides (like add_trees)."""
+    r = np.random.default_rng(seed); kinds = ["tree_oak", "tree_detailed", "tree_default", "tree_fat", "tree_pineRoundA",
+                                              "tree_pineDefaultA", "tree_pineRoundC"]
+    placed = 0
+    while placed < n:
+        a = r.uniform(-math.pi * 0.95, -math.pi * 0.05) if r.random() < 0.8 else r.uniform(0, 2 * math.pi)
+        d = r.uniform(r0, r1); x, y = cx + d * math.cos(a), cy + d * math.sin(a)
+        if keep_clear and keep_clear[0] <= x <= keep_clear[2] and keep_clear[1] <= y <= keep_clear[3]: continue
+        kenney(kinds[int(r.integers(0, len(kinds)))], x, y, rot=r.uniform(0, 2 * math.pi), scale=r.uniform(4.0, 6.0))
+        placed += 1
+
+def kenney_dressing(cx, cy, yard, seed=4):
+    """Bushes, flowers, rocks, stumps and mushrooms round the yard's edge; log stacks by the fence."""
+    r = np.random.default_rng(seed); x0, y0, x1, y1 = yard
+    small = ["plant_bush", "plant_bushDetailed", "plant_bushLarge", "flower_yellowA", "flower_redA", "flower_purpleB",
+             "flower_yellowC", "rock_smallA", "rock_smallC", "stump_round", "mushroom_redGroup", "grass_large"]
+    for k in range(60):
+        side = int(r.integers(0, 3))
+        if side == 0: x, y = r.uniform(x0 - 4, x1 + 4), y0 - r.uniform(2.5, 6)
+        elif side == 1: x, y = x0 - r.uniform(2.5, 6), r.uniform(y0, y1 + 6)
+        else: x, y = x1 + r.uniform(2.5, 6), r.uniform(y0, y1 + 6)
+        nm = small[int(r.integers(0, len(small)))]
+        kenney(nm, x, y, rot=r.uniform(0, 2 * math.pi), scale=r.uniform(2.0, 3.2) if "flower" in nm or "grass" in nm else r.uniform(1.8, 2.6))
+    kenney("log_stackLarge", x0 + 3, y0 - 1.2, rot=0.1, scale=2.5)

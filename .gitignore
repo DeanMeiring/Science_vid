@@ -19,3 +19,6 @@ __pycache__/
 venv/
 # blender
 *.blend1
+
+# third-party 3D assets (Kenney CC0, Quaternius: licence forbids redistributing): never committed
+assets/thirdparty/

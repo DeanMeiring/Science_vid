@@ -29,6 +29,21 @@
   10 -> 2.50, 100 -> 2.99, 1,000 -> 3.03, 10,000 -> 3.13, 100,000 -> 3.143. `episodes/ep07_pi.py`,
   voiced in george (32.2 s; "pi" spoken as "pie"). **No "Next experiment" line yet: Dean picks
   Experiment 8.** Source: Wikipedia, "Buffon's needle problem" (18th century, Comte de Buffon, 2l/(pi t)).
+- **Experiment 7 rendered 23 Oct** (`renders/ep07_pi/ep07_pi.mp4`, 37.4 s, 24 MB). Dean's direction:
+  side view close to Joe, more detail, a backdrop (`blender/scenery.py`: hills, Kenney trees, fence,
+  silo, clouds, sky gradient), deadpan Joe, opening on a hook ("If you throw hay at a floor, you can
+  find pi."), escalation hand -> blur -> wheelbarrow -> tractor -> combine (`blender/machines_props.py`,
+  our own combine: no John Deere colours). Every straw is the simulation's; counted on the planks,
+  then hops onto the heap (Dean asked why it didn't go onto the pile: it must land on the planks to
+  count). 2nd throw shows a pale straw from the first ten (counts at 10/100/... unchanged). Joe now
+  has shoulder joints (`set_walker(arms=..., tool=False)`, `hand_position`). Not posted yet.
+- **Third-party 3D assets:** Kenney (CC0, nature + survival kits) in `assets/thirdparty/kenney`,
+  loaded by `scenery.kenney()`, teal recoloured to farm greens. Quaternius: free commercial use but
+  their licence forbids redistributing the files; downloads need a click on their site. Everything in
+  `assets/thirdparty/` is gitignored, never committed.
+- **TikTok:** Dean posts by hand from his phone. The studio has "Download video" and "Copy title +
+  description" buttons for that. (TikTok's API needs an app audit before posts can be public, and an
+  https login redirect.)
 - **Experiment 6: three barns, one prize (Monty Hall)** (started 23 Oct; Dean: "build, but wait
   on which experiment comes next, I want to think about it"). Branch `claude/episode-6-barns`
   (stacked on `claude/episode-5-crops`). `pipeline/barns.py` is the sim; `episodes/ep06_barns.py`

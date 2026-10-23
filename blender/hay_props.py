@@ -204,8 +204,8 @@ def add_haystack(sc, x, y, radius, height, seed=4):
     for i in range(1, R + 1):
         rr = i / R
         for j in range(A):
-            a = 2 * math.pi * j / A; k = 1 + 0.05 * lump[i, j] * rr
-            z = max(0.0, (1 - rr ** 1.7) ** 0.9) * (1 + 0.04 * lump[i, (j + 7) % A])
+            a = 2 * math.pi * j / A; k = 1 + 0.025 * lump[i, j] * rr
+            z = max(0.0, (1 - rr ** 1.7) ** 0.9) * (1 + 0.015 * lump[i, (j + 7) % A] * rr)
             verts[i][j] = bm.verts.new((rr * k * math.cos(a), rr * k * math.sin(a), z))
     for j in range(A): bm.faces.new((top, verts[1][j], verts[1][(j + 1) % A]))
     for i in range(1, R):

@@ -15,6 +15,7 @@ sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent / "pipeline"))
 import scene as S
 import hay_props as HP
 import hay as HY
+import scenery as SC
 from common import N, ROOT
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
@@ -29,7 +30,8 @@ from mathutils import Vector
 
 c = N // 2
 sc = S.Scene("farm", scale=args.scale)
-sc.set_sky((120, 182, 242))
+SC.add_backdrop(sc, c, c - 3, yard=(c - 16, c - 22, c + 14, c + 8))   # hills, trees, fence, clouds, sky
+SC.add_silo(sc, c - 17, c - 8)
 daisy = sc.add_character("sheep")
 HP.add_floor(sc, c - 8, c - 4, 16, 10)                          # the plank floor, out in the yard
 sc.add_barn(c - 13, c - 3, facing=-math.pi / 3)                 # the barn to the left, for scale
@@ -51,7 +53,7 @@ tone = 0.86 + 0.14 * np.random.default_rng(3).random(len(x))[:, None]
 straws.set(x, y, z, ang, np.where(cross[:, None], GOLD, PALE) * tone, np.where(cross, 0.9, 0.3), tilt, spin)
 sc.set_walker(c + 0.5, c + 2.5, HP.FLOOR_Z, math.radians(200), 100.0)
 sc.set_character(daisy, c - 2.0, c + 2.2, HP.FLOOR_Z, math.radians(-30), 100.0)
-cam = {"first": (c + 0.2, c + 2.4, 140.0, 18.0, 0.7, -14.0), "heap": (c + 0.5, c - 3.0, 52.0, 16.0, 2.2, -14.0),
+cam = {"first": (c + 0.4, c + 2.6, 260.0, 12.0, 0.75, -20.0), "heap": (c + 0.5, c - 3.0, 52.0, 16.0, 2.2, -14.0),
        "mountain": (c + 0.5, c + 1.0, 120.0, 6.0, 2.6, -12.0)}[args.shot]     # mountain: eye level behind Joe
 grid = np.zeros((N, N), np.uint8); grid[c - 4:c + 6, c - 8:c + 8] = 1         # no grass tufts on the planks
 sc.set_tufts(grid, cam[0], cam[1], cam[2]); sc.set_floor(cam[2])

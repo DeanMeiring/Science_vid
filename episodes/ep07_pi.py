@@ -20,27 +20,24 @@ EXPERIMENT = 7
 THEME = "farm"
 # VOICE: Farmer Joe's default (pocket:george)
 
-# Dean (23 Oct): "Captain Obvious" Joe -- the same voice, but deadpan, short sentences, over-explaining the
-# obvious. The maths and the numbers stay exactly as checked.
+# Dean (23 Oct): deadpan Joe, but straight into the action: two or three throws, then "Now: faster" and
+# it escalates: Joe spam-throws (100), a wheelbarrow dumps (1,000), a tractor dumps (10,000), a combine
+# harvester (100,000; our own design, no brand colours). Every load lands on the planks first (that's
+# where it's counted), then hops onto the heap, which grows into a mountain. The maths and the numbers stay as checked.
 NARRATION = [
-    ("setup",  "Experiment number 7. I'm finding pi. With hay. This is hay. It's dried grass. I did not dry it. "
-               "The sun did. Between the boards: cracks. That's where cracks go. Each board is one straw wide. "
-               "I checked. Twice.",
-               "Experiment number seven. I'm finding pie. With hay. This is hay. It's dried grass. I did not dry it. "
-               "The sun did. Between the boards: cracks. That's where cracks go. Each board is one straw wide. "
-               "I checked. Twice."),
-    ("throw",  "I throw a straw. It lands across a crack. Gold. I throw another. It doesn't. Not gold. Still a straw.", None),
-    ("trick",  "Now the trick: two times all the straws, divided by the gold ones, gets closer and closer to pi. "
-               "Not the pie you eat. Daisy. Daisy, no.",
-               "Now the trick: two times all the straws, divided by the gold ones, gets closer and closer to pie. "
-               "Not the pie you eat. Daisy. Daisy, no."),
-    ("count",  "Ten straws: 2.5. Wrong. A hundred: 2.99. Closer. A thousand: 3.03. A hundred thousand straws... 3.14!",
-               "Ten straws: two point five. Wrong. A hundred: two point nine nine. Closer. A thousand: three point oh three. "
-               "A hundred thousand straws... three point one four!"),
-    ("end",    "I did not plan the mountain. A guy named Buffon worked this out in the 1700s. Before tractors. "
-               "See y'all next harvest!",
-               "I did not plan the mountain. A guy named Buffon worked this out in the seventeen hundreds. "
-               "Before tractors. See y'all next harvest!"),
+    ("throw",  "Experiment number 7: finding pi, with hay. If I throw a straw, and it lands across a crack: gold. "
+               "If it doesn't: not gold. My boards are exactly one straw wide.",
+               "Experiment number seven: finding pie, with hay. If I throw a straw, and it lands across a crack: gold. "
+               "If it doesn't: not gold. My boards are exactly one straw wide."),
+    ("fast",   "Now: faster. Two times all the straws, divided by the gold ones, gets closer and closer to pi.",
+               "Now: faster. Two times all the straws, divided by the gold ones, gets closer and closer to pie."),
+    ("count",  "Ten straws: 2.5. A hundred: 2.99. A thousand: 3.03. Ten thousand: 3.13. A hundred thousand... 3.14!",
+               "Ten straws: two point five. A hundred: two point nine nine. A thousand: three point oh three. "
+               "Ten thousand: three point one three. A hundred thousand... three point one four!"),
+    ("end",    "Not the pie you eat, Daisy. I did not plan the mountain. A guy named Buffon worked this out in the 1700s. "
+               "Before tractors. See y'all next harvest!",
+               "Not the pie you eat, Daisy. I did not plan the mountain. A guy named Buffon worked this out in the "
+               "seventeen hundreds. Before tractors. See y'all next harvest!"),
 ]
 
 STRAWS = dict(seed=1, n=100000)

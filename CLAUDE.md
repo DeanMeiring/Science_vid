@@ -35,8 +35,8 @@
   `pipeline/compose_ep08.py` (notes, thought bubble crossed out, BIOGENESIS card, labels, sound).
   End labels spread out with arrows (`NUDGE`). Dean: "looks good". **Full render done 24 Oct**
   (`renders/ep08_plant/ep08_plant.mp4`, 34.6 s, 17 MB). **Posted to YouTube 24 Oct** (Dean asked by message, away from the laptop): https://youtube.com/shorts/WGJwOUZqe9M.
-  Instagram failed 3 times with ProcessingFailedError (the stale-login error again): reconnect Instagram in
-  the studio, or Dean posts the Reel from his phone.
+  Instagram failed 3 times with ProcessingFailedError (the stale-login error again); after Dean reconnected
+  Instagram in the studio it posted 24 Oct 19:37: https://www.instagram.com/reel/De4rysbAF8p/
   Lesson: low memory (~12 of 15.5 GB in use) got the background render stopped twice; finishing it
   in foreground chunks of ~9 min (`--start A --end B`) worked, since only background jobs get stopped.
   Lesson: `--start 0 --end 0` renders the WHOLE video (0 = to the end); for check frames use

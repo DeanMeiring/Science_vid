@@ -33,9 +33,10 @@
   `blender/render_ep08.py` (five scenes cut on words, time-lapse skies, two winters of snow, moustache
   grows, weeds, flask on a table, then the whole farm via `farm_overview.build_upto7()`),
   `pipeline/compose_ep08.py` (notes, thought bubble crossed out, BIOGENESIS card, labels, sound).
-  Dean said wrap up after seeing it; continue later. **To do next:** Dean's feedback on the draft;
-  the end labels for #4-#8 pile up on each other (set `NUDGE` in compose_ep08 after looking at the
-  overview frames); then ask before the full render (~45-50 min).
+  End labels spread out with arrows (`NUDGE`). Dean: "looks good". **Full render done 24 Oct**
+  (`renders/ep08_plant/ep08_plant.mp4`, 34.6 s, 17 MB). Not posted yet (Dean posts from the studio).
+  Lesson: low memory (~12 of 15.5 GB in use) got the background render stopped twice; finishing it
+  in foreground chunks of ~9 min (`--start A --end B`) worked, since only background jobs get stopped.
   Lesson: `--start 0 --end 0` renders the WHOLE video (0 = to the end); for check frames use
   `--every N --start A --end B` with the 1 s pause (a mistake here sent the fans roaring).
 - **Parked: "Get 3 helpers"** (Dean picked it first, then parked it on 23 Oct; a viewer's comment on Experiment 4):

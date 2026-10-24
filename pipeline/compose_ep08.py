@@ -122,7 +122,7 @@ def bubble_fn(x, y, a, cross):
 LABELS = {8: (FO.MORE8[8]["title"], FO.MORE8[8]["sub"]), 7: (FO.MORE8[7]["title"], "π from hay"),
           6: (FO.MORE[6]["title"], FO.MORE[6]["sub"]), 5: (FO.MORE[5]["title"], FO.MORE[5]["sub"]),
           4: ("Experiment #4", "Joe & Daisy: spotless!"), **{k: (FO.FIELDS[k]["title"], FO.FIELDS[k]["sub"]) for k in (1, 2, 3)}}
-NUDGE = {}                                                       # set after looking at the draft
+NUDGE = {8: (204, -593), 7: (-44, 264), 5: (101, -124), 6: (149, 151), 3: (7, 436)}   # #4-#8 sit in one row: spread out, with arrows
 T_PULL = tl.s_end
 LABEL_T = {8: T_PULL + 0.3, 7: T_PULL + 0.7, 5: T_PULL + 1.0, 6: T_PULL + 1.2, 4: T_PULL + 1.4, 1: T_PULL + 1.6,
            2: T_PULL + 1.9, 3: T_PULL + 2.2}
@@ -188,7 +188,7 @@ for f in range(tl.nf):
             if not a or str(k) not in sp["fields"]: continue
             fx, fy = sp["fields"][str(k)][:2]
             dx, dy = NUDGE.get(k, (0, 0))
-            x, y = clampxy(fx + dx, fy + dy, 215, 290)
+            x, y = clampxy(fx + dx, fy + dy, 215, 290, 1530)
             title, sub_ = LABELS[k]; today = k == 8
             comp(img, layer(("lab", k, int(x / 6), int(y / 6), int(fx / 6), int(fy / 6), q(a)), lambda dr, x=x, y=y, fx=fx, fy=fy, a=a,
                             title=title, sub_=sub_, today=today, k=k: (

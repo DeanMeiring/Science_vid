@@ -19,7 +19,10 @@
   Railway). It's a library of methods to reuse here. Copy what's needed;
   don't import across repos.
 
-## Where we left off (end of 22 Oct 2026, 23:00)
+## Where we left off (end of 24 Oct 2026, evening)
+- **Done for the day after Experiment 8** was posted to YouTube and Instagram (Dean: "end for tonight,
+  we work tomorrow again"). TikTok: Dean posts by hand. Next: Experiment 9, Dean's pick ("Get 3 helpers"
+  is parked below). PRs #3/#4 still wait for Dean; episode branches 3-8 are stacked, no PRs yet.
 - **Done for the day after Experiment 5** (Dean: "finish up for today, will continue tomorrow").
   Next, when Dean asks: Experiment 6, "three barns, one prize" (Monty Hall), as Experiment 5's
   last line promises; check the facts by simulation first. Idea from a comment: "Get 3 helpers".

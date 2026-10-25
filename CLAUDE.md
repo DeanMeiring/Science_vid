@@ -128,6 +128,11 @@
 | 22 Oct 13:34 | Ep3 "a lot of views" (Dean) | Ep1 3, Ep2 4, Ep3 2 views; channel 29 views / 0.4 h watch time (28 days); 1 subscriber |
 | 22 Oct 20:05 | likes Ep1 23, Ep2 45, Ep3 132, Ep4 78 (6 h old); 7 followers | Ep1 3, Ep2 4, Ep3 2, Ep4 2 views; 1 subscriber |
 | 22 Oct 22:54 | likes Ep1 25, Ep2 51, Ep3 144, Ep4 149, Ep5 0 (just out); 9 followers | Ep1 4, Ep2 4, Ep3 3, Ep4 2, Ep5 0 views; 1 subscriber |
+| 25 Oct | Ep8 1,444 views, "a lot lower than the others" (Dean) | Ep1 5, Ep2 7, Ep3 4, Ep4 3, Ep5 6, Ep6 3, Ep7 1, Ep8 4 views |
+
+  Why Ep8 did worse (my read, 25 Oct): no surprise (a tyre growing nothing is what everyone expects),
+  no counter racing up, a joke more than an experiment. The best (Ep3 sheep, Ep4 two farmers) ask a
+  clear question and pay it off with a surprising, checked number.
 
   YouTube is barely showing the Shorts while Instagram grows. Asked Dean to
   check in YouTube Studio that each video shows as a Short, its traffic

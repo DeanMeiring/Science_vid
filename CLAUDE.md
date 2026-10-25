@@ -23,6 +23,17 @@
 - **Done for the day after Experiment 8** was posted to YouTube and Instagram (Dean: "end for tonight,
   we work tomorrow again"). TikTok: Dean posts by hand. Next: Experiment 9, Dean's pick ("Get 3 helpers"
   is parked below). PRs #3/#4 still wait for Dean; episode branches 3-8 are stacked, no PRs yet.
+- **Experiment 9: three helpers** (25 Oct; the viewer's "Get 3 helpers", picked after Experiment 8 did
+  worse on Instagram). Branch `claude/episode-9-helpers` (stacked on `claude/episode-8-plant`).
+  `pipeline/helpers.py` is the sim; `episodes/ep09_helpers.py` the script (facts in its docstring), voiced in
+  george (38.2 s, Dean: "voice is good"). Story: 1 helper home ~4 in 10; 2 helpers 0 of 3,000 (Daisy, the
+  cow, then Joe walk off on highways); 3 helpers 24 of 3,000 (the pig; all home at round 1,632); odd numbers
+  of farmers never came home in our tries, even ones sometimes (we don't know why: don't claim a law).
+  New cow and pig characters in `blender/scene.py`. `pipeline/ep09_timeline.py`, `blender/render_ep09.py`,
+  `pipeline/compose_ep09.py` (names, "bye!" notes, "0 of 3,000", tally card, farm labels with `NUDGE`).
+  Ends on the whole farm (`farm_overview.build_upto8()`, today's field at +220 from #4).
+  **Full render done 25 Oct** (`renders/ep09_helpers/ep09_helpers.mp4`, 42.5 s, 37 MB; ~45 min in 5 foreground chunks).
+  Not posted yet.
 - **Done for the day after Experiment 5** (Dean: "finish up for today, will continue tomorrow").
   Next, when Dean asks: Experiment 6, "three barns, one prize" (Monty Hall), as Experiment 5's
   last line promises; check the facts by simulation first. Idea from a comment: "Get 3 helpers".

@@ -341,6 +341,55 @@ class Scene:
                 part("uv_sphere", (0.17, side * 0.075, 0.37), (0.6, 1.2, 0.45), black, radius=0.04, segments=10, ring_count=6)  # ears
                 part("uv_sphere", (0.255, side * 0.032, 0.385), m=eye, radius=0.013, segments=10, ring_count=6)
                 part("uv_sphere", (0.265, side * 0.028, 0.39), m=white, radius=0.004, segments=6, ring_count=4)
+        elif self.character == "cow":
+            # Experiment 9's cow: white with black patches, a pink muzzle, little horns; built facing +X
+            self.body.scale = (2.1, 2.1, 2.1)
+            hide = mat("CowWhite", (244, 242, 236), 0.8); black = mat("CowBlack", (30, 28, 30), 0.7)
+            pink = mat("CowPink", (236, 160, 160), 0.6); horn = mat("CowHorn", (226, 214, 188), 0.5)
+            eye = mat("Eye", (20, 20, 24), 0.2)
+            white = _material("EyeShine", lin((255, 255, 255)), emit=(lin((255, 255, 255)), 2.0))[0]
+            for side in (-1, 1):
+                hip = bpy.data.objects.new(f"Hip{side}", None); self.sc.collection.objects.link(hip)
+                hip.parent = self.body; hip.location = (0, 0, 0.2); self.legs.append(hip)
+                for lx, ly in ((0.13, 0.07 * side), (-0.13, -0.07 * side)):
+                    part("cylinder", (lx, ly, -0.1), m=hide, parent=hip, radius=0.026, depth=0.2, vertices=10)
+                    part("cylinder", (lx, ly, -0.19), m=black, parent=hip, radius=0.028, depth=0.03, vertices=10)  # hooves
+            part("uv_sphere", (0, 0, 0.34), (1.55, 0.85, 0.85), hide, radius=0.16, segments=24, ring_count=12)   # body
+            for dx, dy, dz, r in ((0.06, 0.1, 0.38, 0.07), (-0.12, -0.1, 0.33, 0.08), (-0.05, 0.08, 0.44, 0.06), (0.12, -0.09, 0.36, 0.05)):
+                part("uv_sphere", (dx, dy, dz), (1.3, 0.55, 1.0), black, radius=r, segments=12, ring_count=6)    # patches
+            part("uv_sphere", (0.28, 0, 0.44), (1.15, 0.85, 0.9), hide, radius=0.085, segments=16, ring_count=8)  # head
+            part("uv_sphere", (0.355, 0, 0.405), (0.85, 1.1, 0.75), pink, radius=0.06, segments=16, ring_count=8)  # muzzle
+            part("cylinder", (-0.27, 0, 0.3), m=hide, rot=(0, 0.35, 0), radius=0.012, depth=0.18, vertices=6)    # tail
+            part("uv_sphere", (-0.3, 0, 0.21), m=black, radius=0.022, segments=8, ring_count=4)
+            for side in (-1, 1):
+                part("uv_sphere", (0.4, side * 0.022, 0.41), m=black, radius=0.009, segments=8, ring_count=4)    # nostrils
+                part("cone", (0.26, side * 0.05, 0.53), m=horn, rot=(side * -0.5, 0, 0), radius1=0.016, radius2=0.004, depth=0.06, vertices=8)
+                part("uv_sphere", (0.25, side * 0.1, 0.47), (0.5, 1.3, 0.4), black, radius=0.035, segments=10, ring_count=6)  # ears
+                part("uv_sphere", (0.33, side * 0.045, 0.47), m=eye, radius=0.014, segments=10, ring_count=6)
+                part("uv_sphere", (0.342, side * 0.042, 0.476), m=white, radius=0.004, segments=6, ring_count=4)
+        elif self.character == "pig":
+            # Experiment 9's pig: round and pink, a snout, floppy ears, a curly tail; built facing +X
+            self.body.scale = (2.1, 2.1, 2.1)
+            skin = mat("PigPink", (246, 172, 178), 0.55); snout = mat("PigSnout", (226, 128, 140), 0.5)
+            dark = mat("PigDark", (90, 40, 50), 0.4); eye = mat("Eye", (20, 20, 24), 0.2)
+            white = _material("EyeShine", lin((255, 255, 255)), emit=(lin((255, 255, 255)), 2.0))[0]
+            for side in (-1, 1):
+                hip = bpy.data.objects.new(f"Hip{side}", None); self.sc.collection.objects.link(hip)
+                hip.parent = self.body; hip.location = (0, 0, 0.13); self.legs.append(hip)
+                for lx, ly in ((0.1, 0.07 * side), (-0.1, -0.07 * side)):
+                    part("cylinder", (lx, ly, -0.065), m=skin, parent=hip, radius=0.028, depth=0.13, vertices=10)
+            part("uv_sphere", (0, 0, 0.25), (1.35, 1.0, 0.92), skin, radius=0.16, segments=24, ring_count=12)   # body
+            part("uv_sphere", (0.2, 0, 0.29), (1.0, 1.0, 0.95), skin, radius=0.1, segments=16, ring_count=8)     # head
+            part("cylinder", (0.3, 0, 0.27), m=snout, rot=(0, math.pi / 2, 0), radius=0.045, depth=0.05, vertices=16)
+            for side in (-1, 1):
+                part("uv_sphere", (0.326, side * 0.017, 0.272), m=dark, radius=0.01, segments=8, ring_count=4)   # nostrils
+                part("cone", (0.18, side * 0.075, 0.38), m=skin, rot=(side * -0.6, 0.5, 0), radius1=0.04, radius2=0.006, depth=0.08, vertices=8)
+                part("uv_sphere", (0.275, side * 0.045, 0.33), m=eye, radius=0.013, segments=10, ring_count=6)
+                part("uv_sphere", (0.287, side * 0.042, 0.336), m=white, radius=0.004, segments=6, ring_count=4)
+            for i in range(5):                                                                  # a curly tail
+                a = i * 1.4
+                part("uv_sphere", (-0.215 - 0.012 * i, 0.025 * math.sin(a), 0.3 + 0.025 * math.cos(a)), m=skin,
+                     radius=0.012, segments=8, ring_count=4)
         elif self.theme == "ant":
             am = mat("Ant", (52, 28, 14), 0.3)
             for o_, r, z in ((-0.3, 0.17, 0.16), (0.0, 0.11, 0.15), (0.24, 0.13, 0.16)):

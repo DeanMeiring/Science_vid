@@ -19,7 +19,10 @@
   Railway). It's a library of methods to reuse here. Copy what's needed;
   don't import across repos.
 
-## Where we left off (end of 24 Oct 2026, evening)
+## Where we left off (end of 25 Oct 2026, ~23:00)
+- **Done for the day after Experiment 9** was posted (Dean: "finish up, going to bed"). Open: Experiment 9's
+  YouTube Short is private (make it public), TikTok by hand, check Experiment 9's Instagram numbers vs
+  Experiment 8's (1,444 views). Next: Experiment 10, Dean's pick. Episode branches 3-9 stacked, no PRs yet.
 - **Done for the day after Experiment 8** was posted to YouTube and Instagram (Dean: "end for tonight,
   we work tomorrow again"). TikTok: Dean posts by hand. Next: Experiment 9, Dean's pick ("Get 3 helpers"
   is parked below). PRs #3/#4 still wait for Dean; episode branches 3-8 are stacked, no PRs yet.
@@ -33,7 +36,9 @@
   `pipeline/compose_ep09.py` (names, "bye!" notes, "0 of 3,000", tally card, farm labels with `NUDGE`).
   Ends on the whole farm (`farm_overview.build_upto8()`, today's field at +220 from #4).
   **Full render done 25 Oct** (`renders/ep09_helpers/ep09_helpers.mp4`, 42.5 s, 37 MB; ~45 min in 5 foreground chunks).
-  Not posted yet.
+  **Posted 25 Oct 22:53** from the studio: Instagram https://www.instagram.com/reel/De7nIBoACC4/ and YouTube
+  https://youtube.com/shorts/lATKo5SoLTk, but YouTube went up **private** (the studio's privacy box): Dean to
+  switch it to public in YouTube Studio. TikTok: by hand.
 - **Done for the day after Experiment 5** (Dean: "finish up for today, will continue tomorrow").
   Next, when Dean asks: Experiment 6, "three barns, one prize" (Monty Hall), as Experiment 5's
   last line promises; check the facts by simulation first. Idea from a comment: "Get 3 helpers".

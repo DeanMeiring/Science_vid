@@ -9,6 +9,7 @@ turns, one slow move at a time while Joe explains (the animals nod to eat grass 
 compost pile on bare dirt; Joe harvests with a nod or plants a sprout). Squares keep the colour of
 whoever cleared them (Joe blue, Daisy gold, the cow red, the pig pink). Hard cuts between the runs;
 the camera fits everyone, so it pulls right back as they walk off, and they turn into glowing dots.
+At the end it pulls back over the whole farm, every experiment so far (pipeline/farm_overview.build_upto8).
 """
 import argparse, json, math, sys, time
 from pathlib import Path
@@ -48,6 +49,25 @@ sc = S.Scene("farm", scale=args.scale)
 sc.set_sky((120, 182, 242))
 HANDLE = {name: sc.add_character(kind) for name, kind in (("daisy", "sheep"), ("cow", "cow"), ("pig", "pig"))}
 ANGS = [math.pi / 2, 0, -math.pi / 2, math.pi]
+
+# ---------------- the whole farm at the end: every experiment so far, today's field on the right ----------------
+E4 = (-220, 0)                                     # Experiment 4's field, from today's (#9 sits at +220, 0 from it)
+OV_RGBA, OV_FID, OV_BOX, OV_BARN = FO.build_upto8()
+STAG = (np.sin(np.arange(FO.SZ)[:, None] * 12.9898 + np.arange(FO.SZ)[None, :] * 78.233) * 43758.5453) % 1.0
+REVEAL = {8: tl.t_pull + 0.4, 7: tl.t_pull + 0.6, 5: tl.t_pull + 0.8, 6: tl.t_pull + 1.0, 1: tl.t_pull + 1.2,
+          2: tl.t_pull + 1.5, 3: tl.t_pull + 1.8}         # each field grows in; #4 is spotless (nothing to paint)
+def overview(tt):
+    a = np.zeros((FO.SZ, FO.SZ), np.float32)
+    for k, t0 in REVEAL.items():
+        mm = OV_FID == k; a[mm] = np.clip((tt - t0) / 0.4 - STAG[mm] * 1.0, 0, 1)
+    img = OV_RGBA.copy(); img[..., 3] *= a
+    return img
+sc.add_barn(c + E4[0] + OV_BARN[0], c + E4[1] + OV_BARN[1], facing=-math.pi / 2)        # Experiment 3's barn
+BOXES = {k: (b[0] + E4[0], b[1] + E4[1], b[2] + E4[0], b[3] + E4[1]) for k, b in OV_BOX.items()}
+BOXES[9] = (-8, -5, 8, 5)
+allb = np.array(list(BOXES.values()))
+OV_C = ((allb[:, 0].min() + allb[:, 2].max()) / 2, (allb[:, 1].min() + allb[:, 3].max()) / 2)
+OV_S = 1000 / (allb[:, 2].max() - allb[:, 0].min() + 90)
 
 def prop(name, parts):
     """A small object made of spheres: parts = [(loc, radius, scale, rgb)]."""
@@ -94,7 +114,7 @@ class Run:
 RUNS = {name: Run(name) for name in CAST}
 
 cam = dict(cx=0.0, cy=0.0, s=90.0, pitch=54.0)
-t_start = time.time(); rendered = 0; last_scene = -1
+t_start = time.time(); rendered = 0; last_scene = -1; ov_set = -1
 for f in range(end):
     tt = f / FPS
     si = int(tl.scene[f]); run = RUNS[tl.scenes[si][0]]; n = len(run.cast)
@@ -115,6 +135,11 @@ for f in range(end):
     if si != last_scene:                                   # a hard cut: start framed
         cam.update(tgt); last_scene = si
     k_ = 0.12 if si == 3 and tt >= tl.t_but else 0.08
+    if tt >= tl.t_pull:                                    # pull back over the whole farm
+        u = smooth((tt - tl.t_pull) / 2.4); px, py = run.pos[3][:2]
+        tgt = dict(cx=px + 0.5 + (OV_C[0] - px - 0.5) * u, cy=py + 0.5 + (OV_C[1] - py - 0.5) * u,
+                   s=150.0 * (OV_S / 150.0) ** u, pitch=54 + 8 * u)
+        k_ = 0.25
     cam["s"] *= (tgt["s"] / cam["s"]) ** k_
     for key in ("cx", "cy", "pitch"): cam[key] += (tgt[key] - cam[key]) * k_
     if f < args.start or f % args.every: continue
@@ -141,6 +166,10 @@ for f in range(end):
         gy_, gx_ = np.array([p[1] for p in cells]) + c, np.array([p[0] for p in cells]) + c
         ok = (gx_ >= 0) & (gx_ < N) & (gy_ >= 0) & (gy_ < N); grid[gy_[ok], gx_[ok]] = 1
     sc.set_tufts(grid, cam["cx"] + c, cam["cy"] + c, cam["s"]); sc.set_floor(cam["s"])
+    if tt >= tl.t_pull:
+        key = round(min(tt, max(REVEAL.values()) + 1.5), 2)
+        if key != ov_set:                            # lifted: from far away the floor shows through a plane at z=0.02
+            sc.set_trail_image(overview(tt), c + E4[0] - FO.SZ // 2, c + E4[1] - FO.SZ // 2, glow=0.15, z=0.4); ov_set = key
     # ---- everyone in this run: while slow, the one moving acts on his square, then steps; the rest off stage
     show_prop(COMPOST, (0, 0), 0); show_prop(SPROUT, (0, 0), 0)
     at = {}; act = None
@@ -172,6 +201,8 @@ for f in range(end):
     bpy.context.view_layer.update()
     rec = dict(run=run.name, scene=si, round=run.done // n, moves=run.done, dirt=len(show_dirt), act=act, s=round(cam["s"], 1),
                who={name: to_screen(*p, 1.0 if name == "joe" else 0.8) for name, p in at.items()})
+    if tt >= tl.t_pull:
+        rec["fields"] = {str(k): to_screen((b[0] + b[2]) / 2 + c + 0.5, b[1] + c - 4, 0.0) for k, b in BOXES.items()}
     SCREEN[str(f)] = rec
     sc.render(path)
     if args.pause: time.sleep(args.pause)            # breathing room for the chip (and the fan)

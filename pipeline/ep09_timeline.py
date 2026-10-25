@@ -7,7 +7,8 @@ Three runs (pipeline/helpers.py, pipeline/farmers.py), everyone taking turns, cu
   C "three": Joe, the cow and Daisy (TWO_HELPERS): Daisy walks off on "first", the cow on "cow",
              Joe on "me", then they keep going while the 3,000 tries are counted;
   D "four" again, from where A stopped: the pig on "pig", racing from "More" to round 1,632 on
-             "thirty-two" (all grass, everybody home), then still while Joe sums up.
+             "thirty-two" (all grass, everybody home), then still while Joe sums up; after "keeping the
+             pig" the camera pulls back over the whole farm (pipeline/farm_overview.build_upto8).
 """
 import json, sys
 from pathlib import Path
@@ -20,7 +21,7 @@ import farmers as FM
 import helpers as HP
 
 LEAD = 0.3          # the voice starts this long after the picture (they're already moving)
-TAIL = 1.8          # picture after the last word
+TAIL = 4.2          # picture after the last word (the pull back over the whole farm)
 SLOW = 1.85         # moves per second while slow: SPEED x1
 
 # who's who in each run, by farmer index
@@ -57,6 +58,7 @@ class Timeline:
         self.t_one, self.t_two, self.t_third = W("With"), W("So"), W("So", 1)
         self.t_pig, self.t_more, self.t_home = W("pig."), W("More"), W("thirty-two.")
         self.t_sum, self.t_but, self.t_end = W("Twenty-four"), W("But"), self.duration
+        self.t_pull = W("pig.", 1) + 0.6                 # then the camera pulls back over the whole farm
         self.t_left = {"daisy": W("first."), "cow": W("cow."), "joe": W("me.")}
         a_slow = 15                                       # moves done in scene A (all slow)
         self.scenes = [   # (run, start, end, keys: (time, moves done, mode to the next key))

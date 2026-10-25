@@ -125,3 +125,24 @@ def build_upto7():
     fid[h - 26:h + 7, h - 184:h - 154][rgba[h - 26:h + 7, h - 184:h - 154, 3] > 0] = 7
     boxes[7] = (-182, -24, -156, 6)
     return rgba, fid, boxes, barn
+
+# ---------------- the farm after Experiment 8 (for Experiment 9's zoom out) ----------------
+# #8 (the garden) on the far left at -260, 0 from Experiment 4's field: the long bed with the mustard,
+# the apple trees and the tyre in its ring of weeds; #9 (Joe and three helpers) on the right at +220, 0.
+MORE9 = {8: dict(title="Experiment #8", sub="what grows?"), 9: dict(title="Experiment #9", sub="today: 3 helpers")}
+
+def build_upto8():
+    """build_upto7(), plus Experiment 8's garden painted in."""
+    rgba, fid, boxes, barn = build_upto7()
+    h = SZ // 2; ox = -260
+    def paint(x0, x1, y0, y1, rgb):
+        rgba[h + y0:h + y1, h + ox + x0:h + ox + x1, :3] = np.array(rgb) / 255; rgba[h + y0:h + y1, h + ox + x0:h + ox + x1, 3] = 1
+    paint(-6, 9, -2, 2, DIRT)                                        # the bed
+    for x in (-4, 3, 4):                                             # mustard (the two in "both" too)
+        paint(x, x + 1, -1, 1, (238, 206, 60))
+    for x, r in ((0, 2), (5, 1)):                                    # the apple trees, from above
+        paint(x - r, x + r + 1, -r - 1, r, (64, 140, 52))
+    paint(6, 9, -2, 1, (40, 36, 34)); paint(7, 8, -1, 0, (90, 150, 60))   # the tyre and the weeds in it
+    fid[h - 4:h + 4, h + ox - 8:h + ox + 11][rgba[h - 4:h + 4, h + ox - 8:h + ox + 11, 3] > 0] = 8
+    boxes[8] = (ox - 7, -3, ox + 9, 3)
+    return rgba, fid, boxes, barn

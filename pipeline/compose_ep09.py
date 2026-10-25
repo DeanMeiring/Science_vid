@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import FPS, ROOT, ffmpeg, FFMPEG_THREADS, gentle
 gentle()
 from ep09_timeline import CAST, LEAD, Timeline
+import farm_overview as FO
 
 ap = argparse.ArgumentParser(); ap.add_argument("--draft", action="store_true"); args = ap.parse_args()
 tl = Timeline(ROOT / "episodes" / "ep09_helpers.py")
@@ -133,6 +134,16 @@ def card_fn(tt):
                 dr.rounded_rectangle((x0 + 30, y - 46, x1 - 30, y + 46), 24, outline=col, width=5)
     return fn
 
+# the whole farm: a label for every experiment (#4-#9 sit in one row: spread out, with arrows)
+LABELS = {9: (FO.MORE9[9]["title"], FO.MORE9[9]["sub"]), 8: (FO.MORE9[8]["title"], FO.MORE9[8]["sub"]),
+          7: (FO.MORE8[7]["title"], "π from hay"), 6: (FO.MORE[6]["title"], FO.MORE[6]["sub"]),
+          5: (FO.MORE[5]["title"], FO.MORE[5]["sub"]), 4: ("Experiment #4", "Joe & Daisy: spotless!"),
+          **{k: (FO.FIELDS[k]["title"], FO.FIELDS[k]["sub"]) for k in (1, 2, 3)}}
+NUDGE = {9: (-51, 592), 7: (-37, -116), 6: (54, -83), 5: (-90, 243), 8: (68, 291), 3: (-191, 446)}
+LABEL_T = {9: tl.t_pull + 0.3, 8: tl.t_pull + 0.6, 7: tl.t_pull + 0.8, 5: tl.t_pull + 1.0, 6: tl.t_pull + 1.2,
+           4: tl.t_pull + 1.4, 1: tl.t_pull + 1.6, 2: tl.t_pull + 1.9, 3: tl.t_pull + 2.2}
+def clampxy(x, y, mx, y0, y1): return min(max(x, mx), W - mx), min(max(y, y0), y1)
+
 # ---------------- video ----------------
 ff = subprocess.Popen([ffmpeg(), "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
                        "-r", str(FPS), "-i", "-", *FFMPEG_THREADS, "-c:v", "libx264", "-preset", "medium", "-crf", "19",
@@ -209,11 +220,25 @@ for f in range(tl.nf):
         if L is not None:
             y0, y1, x0, x1, rgb, aa, sh = L; comp(img, (y0, y1, x0, x1, rgb, aa * a, sh * a))
     # keeping the pig
-    a = pop(tt, tl.at("keeping") - 0.1, tl.duration + 1)
+    a = pop(tt, tl.at("keeping") - 0.1, tl.t_pull + 0.3)
     if a and "pig" in who:
         x, y = who["pig"][:2]
         comp(img, layer(("keep", int(x / 8), int(y / 8), q(a)), lambda dr, x=x, y=y, a=a: (
             text(dr, (clampx(x), clampy(y - 230)), "keeper", MARK(90), al(PINK, a), 7))))
+    # the whole farm
+    if "fields" in sp:
+        for k, t0 in LABEL_T.items():
+            a = pop(tt, t0, tl.duration + 1, 0.25)
+            if not a or str(k) not in sp["fields"]: continue
+            fx, fy = sp["fields"][str(k)][:2]
+            dx, dy = NUDGE.get(k, (0, 0))
+            x, y = clampxy(fx + dx, fy + dy, 215, 290, 1530)
+            title, sub_ = LABELS[k]; today = k == 9
+            comp(img, layer(("lab", k, int(x / 6), int(y / 6), int(fx / 6), int(fy / 6), q(a)), lambda dr, x=x, y=y, fx=fx, fy=fy, a=a,
+                            title=title, sub_=sub_, today=today, k=k: (
+                arrow(dr, (x, y + (25 if fy > y else -95)), (fx, fy + 40 if fy > y else fy + 30), al(WHITE, a), 5) if k in NUDGE else None,
+                text(dr, (x, y - 62), title, MARK(58 if today else 50), al(GOLD if today else WHITE, a), 6),
+                text(dr, (x, y - 8), sub_, HAND(52), al(WHITE, a), 5))))
     # captions
     for t0, t1, c in spans:
         if t0 <= tt < t1:
@@ -275,6 +300,8 @@ t = np.arange(len(au)) / SR
 pad = sum(np.sin(2 * np.pi * f_ * t + p) for f_, p in ((98, 0), (147, 1.3), (196, 2.1), (247, 0.7))) / 4
 au += pad * np.clip((t - 0.5) / 3, 0, 1) * 0.07
 for i, mult in enumerate((1, 1.25, 1.5)): pluck(tl.at("keeping") + 0.6 + i * 0.12, 261.6 * mult, 0.18, 1.6, 3.0)
+whoosh(tl.t_pull + 1.0, 1.0, 0.35)
+for k, t0 in LABEL_T.items(): pluck(t0, 196.0 * 2 ** ((12 + 2 * k) / 12), 0.16, 5, 1.2)              # a ding per label
 au /= np.abs(au).max() / 0.8
 with wave.open(str(D / "narration_flow.wav")) as w:
     sr0 = w.getframerate(); vo0 = np.frombuffer(w.readframes(w.getnframes()), "<i2").astype(np.float32) / 32767

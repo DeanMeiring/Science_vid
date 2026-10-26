@@ -26,6 +26,18 @@
 - **Done for the day after Experiment 8** was posted to YouTube and Instagram (Dean: "end for tonight,
   we work tomorrow again"). TikTok: Dean posts by hand. Next: Experiment 9, Dean's pick ("Get 3 helpers"
   is parked below). PRs #3/#4 still wait for Dean; episode branches 3-8 are stacked, no PRs yet.
+- **Experiment 11: Joe's crop codes** (26 Oct; Dean: "move in different patterns like LLRRLL"). Branch
+  `claude/episode-11-codes` (stacked on `claude/episode-10-chicken`). `pipeline/codes.py` is the sim; four codes:
+  RLLLLRRRLLL square spiral (our find), LRRRRRLLR fills a square (Wikipedia), RRLLLRLLLRRR triangle that moves
+  (Wikipedia), RRLRLLRLRR highway from step 232,645, every 936 steps (our find). Ending fact: Gajardo et al. 2000,
+  one ant's path can compute any boolean circuit (no source found for "can't predict without running": not said).
+  `episodes/ep11_codes.py`, voiced in george (33.9 s). `pipeline/ep11_timeline.py`, `blender/render_ep11.py` (each
+  field one trail image; 2 x 2 block; farm above it, `farm_overview.build_upto10()`), `pipeline/compose_ep11.py`
+  (code card, reveal words, one "#1-#10" farm label since today's fields dwarf the farm).
+  Lesson: far away, flat images must float higher or they flicker into the grass (`lift()`: max(0.4, 2.2 / s)).
+  Lesson: `scene.set_tufts` now ignores squares off its grid (crashed when the camera left the 700 grid).
+  **Full render done 26 Oct** (`renders/ep11_codes/ep11_codes.mp4`, 37.9 s, 40 MB). Not posted yet.
+  Experiment 12 should NOT be the walking rule again (it's been 1, 2, 5, 9, 11): birthday cows is next in line.
 - **Experiment 10: the chicken and the barns** (26 Oct; Dean picked it from the ideas list: chaos game).
   Branch `claude/episode-10-chicken` (stacked on `claude/episode-9-helpers`). `pipeline/chaos.py` is the sim
   (1,000,000 hops: 0 in the middle hole or any hole to 8 levels; four barns fill the square evenly);

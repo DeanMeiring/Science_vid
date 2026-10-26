@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Science_vid Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f4f5f9; --panel: #ffffff; --ink: #14161f; --muted: #636a7e; --line: #e2e5ee;
+  --field: #f7f8fb; --accent: #f5b72b; --accent-ink: #1b1400; --good: #2f9e5b; --bad: #d64545;
+  --yt: #ff0033; --ig: linear-gradient(45deg, #f9a825, #e91e63 55%, #7b1fa2);
+  --shadow: 0 1px 2px rgba(20,22,31,.06), 0 8px 28px rgba(20,22,31,.07);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d0f16; --panel: #161925; --ink: #eef0f6; --muted: #8d94a8; --line: #262a39;
+    --field: #10131c; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d0f16; --panel: #161925; --ink: #eef0f6; --muted: #8d94a8; --line: #262a39;
+  --field: #10131c; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.35);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 Inter, system-ui, sans-serif; }
+header { display: flex; align-items: center; gap: 16px; padding: 14px 24px; border-bottom: 1px solid var(--line);
+  background: var(--panel); position: sticky; top: 0; z-index: 2; flex-wrap: wrap; }
+.brand { font: 26px/1 Anton, Impact, sans-serif; letter-spacing: .5px; }
+.brand span { color: var(--accent); }
+.conns { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--field); font-size: 13px; font-weight: 500; }
+.chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.chip.on .dot { background: var(--good); }
+.chip button { font-size: 12px; padding: 3px 9px; }
+main { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 60px); }
+nav { border-right: 1px solid var(--line); padding: 16px 12px; }
+nav h3 { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 4px 8px 10px; }
+.ep { display: block; width: 100%; text-align: left; border: 0; background: none; color: inherit; cursor: pointer;
+  padding: 10px 12px; border-radius: 10px; font: inherit; }
+.ep:hover { background: var(--field); }
+.ep.sel { background: var(--panel); box-shadow: var(--shadow); }
+.ep b { display: block; font-weight: 600; }
+.ep small { color: var(--muted); }
+.work { display: grid; grid-template-columns: minmax(260px, 400px) minmax(320px, 560px); gap: 28px;
+  padding: 28px; align-items: start; justify-content: center; }
+.phone { background: #000; border-radius: 28px; padding: 10px; box-shadow: var(--shadow); position: sticky; top: 88px; }
+.phone video, .phone .empty { width: 100%; aspect-ratio: 9/16; border-radius: 20px; display: block; background: #000; }
+.phone .empty { display: grid; place-items: center; color: #8d94a8; text-align: center; padding: 24px; font-size: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); }
+.card + .card { margin-top: 16px; }
+.card h2 { margin: 0 0 4px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.status { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.badge { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--field); border: 1px solid var(--line); }
+.badge.ready { background: rgba(47,158,91,.12); color: var(--good); border-color: rgba(47,158,91,.3); }
+.badge.draft { background: rgba(245,183,43,.15); color: #b07d00; border-color: rgba(245,183,43,.35); }
+.bar { height: 6px; border-radius: 99px; background: var(--field); overflow: hidden; margin-top: 10px; }
+.bar i { display: block; height: 100%; background: var(--accent); }
+label { display: block; font-weight: 600; font-size: 13px; margin: 14px 0 6px; }
+label .count { float: right; font-weight: 500; color: var(--muted); }
+input[type=text], input[type=datetime-local], textarea { width: 100%; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--field); color: var(--ink); font: inherit; }
+textarea { min-height: 190px; resize: vertical; }
+input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; flex-wrap: wrap; }
+.seg button { border: 0; border-radius: 0; background: var(--field); color: var(--ink); padding: 8px 14px; font-weight: 500; }
+.seg button.sel { background: var(--ink); color: var(--panel); }
+.check { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; font-size: 13px; color: var(--muted); }
+.check input { margin-top: 3px; }
+button { cursor: pointer; font: inherit; font-weight: 600; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--field); color: var(--ink); padding: 8px 14px; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+.go { border: 0; color: #fff; padding: 13px 14px; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.go.yt { background: var(--yt); }
+.go.ig { background: var(--ig); }
+.go.dl { grid-column: 1 / -1; background: var(--ink); color: var(--panel); }
+.go.both { grid-column: 1 / -1; background: linear-gradient(90deg, var(--yt), #e91e63 60%, #7b1fa2); font-size: 16px; padding: 15px 14px; }
+.ghost { background: none; }
+.posted { display: grid; gap: 8px; margin-top: 14px; }
+.posted a { color: inherit; font-weight: 600; }
+.posted div { padding: 10px 12px; border-radius: 10px; background: var(--field); font-size: 13px; }
+.log { margin-top: 14px; font: 12px/1.5 ui-monospace, Consolas, monospace; color: var(--muted); white-space: pre-wrap;
+  background: var(--field); border-radius: 10px; padding: 10px 12px; display: none; max-height: 160px; overflow: auto; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--panel);
+  padding: 10px 16px; border-radius: 10px; font-weight: 500; display: none; max-width: calc(100vw - 32px); z-index: 5; }
+.hint { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+@media (max-width: 900px) {
+  main { grid-template-columns: 1fr; }
+  nav { border-right: 0; border-bottom: 1px solid var(--line); display: flex; gap: 6px; overflow-x: auto; padding: 10px 16px; }
+  nav h3 { display: none; }
+  .ep { white-space: nowrap; width: auto; }
+  .work { grid-template-columns: 1fr; padding: 16px; }
+  .phone { position: static; max-width: 360px; margin: 0 auto; }
+  header { padding: 12px 16px; }
+  .actions { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">SCIENCE<span>_</span>VID STUDIO</div>
+  <div class="conns">
+    <div class="chip" id="yt-chip"><span class="dot"></span><span id="yt-label">YouTube</span><button id="yt-btn"></button></div>
+    <div class="chip" id="ig-chip"><span class="dot"></span><span id="ig-label">Instagram</span><button id="ig-btn"></button></div>
+  </div>
+</header>
+<main>
+  <nav id="eps"><h3>Episodes</h3></nav>
+  <section class="work">
+    <div class="phone" id="phone"><div class="empty">No video yet</div></div>
+    <div>
+      <div class="card">
+        <div class="status"><h2 id="ep-name" style="margin:0">Episode</h2><span class="badge" id="badge"></span><span class="hint" id="dur" style="margin:0"></span></div>
+        <div id="render"></div>
+        <label for="title">Title <span class="count" id="title-count"></span></label>
+        <input id="title" type="text" maxlength="100">
+        <label for="desc">Description <span class="count" id="desc-count"></span></label>
+        <textarea id="desc"></textarea>
+        <p class="hint">#Shorts is added for YouTube automatically, and left off on Instagram. Edits are saved when you post or press Save.</p>
+        <button class="ghost" id="save" style="margin-top:10px">Save text</button>
+      </div>
+      <div class="card">
+        <h2>YouTube settings</h2>
+        <label>Visibility</label>
+        <div class="seg" id="privacy">
+          <button data-v="private" class="sel">Private</button><button data-v="unlisted">Unlisted</button>
+          <button data-v="public">Public</button><button data-v="schedule">Schedule</button>
+        </div>
+        <div id="sched-box" style="display:none"><label for="when">Goes public at (your local time)</label><input id="when" type="datetime-local"></div>
+        <label class="check"><input type="checkbox" id="synthetic"> Mark as altered or synthetic content (YouTube's "altered content" box). Off by default.</label>
+        <div class="actions">
+          <button class="go both" id="post-both">⇪ Post to both</button>
+          <button class="go yt" id="post-yt">▶ Post to YouTube</button>
+          <button class="go ig" id="post-ig">◎ Post to Instagram</button>
+          <button class="go dl" id="download">⬇ Download video (for TikTok)</button>
+          <button class="go dl" id="copy-tt">⧉ Copy title + description (for TikTok)</button>
+        </div>
+        <div class="posted" id="posted"></div>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+const $ = id => document.getElementById(id);
+let S = null, cur = null, privacy = 'private', busy = false;
+
+function toast(msg, ms = 4000) { const t = $('toast'); t.textContent = msg; t.style.display = 'block';
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = 'none', ms); }
+
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.detail || r.statusText);
+  return j;
+}
+
+function conn(which, st) {
+  const chip = $(which + '-chip'), btn = $(which + '-btn'), label = $(which + '-label');
+  const name = which === 'yt' ? 'YouTube' : 'Instagram';
+  chip.classList.toggle('on', st.connected);
+  label.textContent = st.connected ? `${name}: ${st.channel || (st.username ? '@' + st.username : 'connected')}` : name;
+  btn.textContent = st.connected ? 'Disconnect' : 'Connect';
+  btn.title = st.configured ? '' : `Add the ${name} app keys to .env first (see README)`;
+  btn.onclick = async () => {
+    if (st.connected) { if (confirm(`Disconnect ${name}?`)) { await api(`/api/disconnect/${which === 'yt' ? 'youtube' : 'instagram'}`, {}); load(); } }
+    else location.href = `/auth/${which === 'yt' ? 'youtube' : 'instagram'}/login`;
+  };
+}
+
+function renderEps() {
+  const nav = $('eps'); nav.querySelectorAll('.ep').forEach(e => e.remove());
+  for (const e of S.episodes) {
+    const b = document.createElement('button'); b.className = 'ep' + (cur && cur.name === e.name ? ' sel' : '');
+    const state = e.video ? (e.draft ? 'draft' : 'ready') : 'not rendered';
+    const posted = Object.keys(e.posted || {}).length ? ' · posted' : '';
+    b.innerHTML = `<b>Experiment #${e.experiment ?? '?'}</b><small>${e.name} · ${state}${posted}</small>`;
+    b.onclick = () => select(e.name); nav.appendChild(b);
+  }
+}
+
+function select(name, refresh = false) {
+  const prevVideo = cur && cur.name === name ? cur.video : null;
+  cur = S.episodes.find(e => e.name === name) || S.episodes[0]; if (!cur) return;
+  try { localStorage.setItem('ep', cur.name); } catch (e) {}
+  renderEps();
+  $('ep-name').textContent = `Experiment #${cur.experiment ?? '?'}`;
+  const badge = $('badge');
+  badge.className = 'badge ' + (cur.video ? (cur.draft ? 'draft' : 'ready') : '');
+  badge.textContent = cur.video ? (cur.draft ? 'Draft: choppy on purpose' : 'Ready to post') : 'Not rendered';
+  badge.title = cur.draft ? 'Quick timing check: about 1 frame per second at half size. The finished video is a smooth 30 fps.' : '';
+  $('dur').textContent = cur.duration ? `${cur.duration.toFixed(1)} s` : '';
+  const pct = cur.frames_total ? Math.min(100, Math.round(100 * cur.frames / cur.frames_total)) : 0;
+  $('render').innerHTML = (cur.draft || !cur.video) && cur.frames_total
+    ? `<p class="hint">Showing the quick draft (about 1 frame per second, so it looks choppy). The smooth 30 fps video replaces it when the full render is done.</p><p class="hint">Full-size render: ${cur.frames.toLocaleString()} / ${cur.frames_total.toLocaleString()} frames (${pct}%)</p><div class="bar"><i style="width:${pct}%"></i></div>` : '';
+  // a background refresh keeps what's being typed and doesn't restart the video
+  if (!refresh || cur.video !== prevVideo)
+    $('phone').innerHTML = cur.video ? `<video src="${cur.video}" controls playsinline preload="metadata"></video>` : '<div class="empty">No video yet</div>';
+  if (!refresh) { $('title').value = cur.title; $('desc').value = cur.description; }
+  counts();
+  const p = cur.posted || {}, rows = [];
+  if (p.youtube) rows.push(`<div>YouTube (${p.youtube.privacy}) · ${p.youtube.at} · <a href="${p.youtube.url}" target="_blank" rel="noopener">${p.youtube.url}</a></div>`);
+  if (p.instagram) rows.push(`<div>Instagram · ${p.instagram.at} · ${p.instagram.url ? `<a href="${p.instagram.url}" target="_blank" rel="noopener">open Reel</a>` : 'posted'}</div>`);
+  $('posted').innerHTML = rows.join('');
+  buttons();
+}
+
+function counts() {
+  $('title-count').textContent = `${$('title').value.length} / 100`;
+  $('desc-count').textContent = `${$('desc').value.length} / 5000`;
+}
+
+function buttons() {
+  const ready = cur && cur.video && !cur.draft;
+  $('post-both').disabled = busy || !ready || !S.youtube.connected || !S.instagram.connected;
+  $('post-both').title = !ready ? 'Wait for the full-size video' : !(S.youtube.connected && S.instagram.connected) ? 'Connect YouTube and Instagram first' : '';
+  $('post-yt').disabled = busy || !ready || !S.youtube.connected;
+  $('post-ig').disabled = busy || !ready || !S.instagram.connected;
+  $('post-yt').title = !ready ? 'Wait for the full-size video' : !S.youtube.connected ? 'Connect YouTube first' : '';
+  $('post-ig').title = !ready ? 'Wait for the full-size video' : !S.instagram.connected ? 'Connect Instagram first' : '';
+  $('download').disabled = !ready; $('copy-tt').disabled = !cur;
+  $('download').title = ready ? 'Save the mp4, e.g. to post on TikTok from your phone' : 'Wait for the full-size video';
+}
+
+async function load(refresh = false) {
+  S = await api('/api/state');
+  conn('yt', S.youtube); conn('ig', S.instagram);
+  let want = cur && cur.name; try { want = want || localStorage.getItem('ep'); } catch (e) {}
+  select(want, refresh && cur && cur.name === want);
+}
+
+const NAMES = { youtube: 'YouTube', instagram: 'Instagram' };
+
+// one job on the server; resolves true when posted
+async function runJob(where, publish_at, log) {
+  const name = NAMES[where];
+  log.textContent += `\nPosting to ${name}…\n`;
+  const head = log.textContent;
+  try {
+    const { job } = await api(`/api/episode/${cur.name}/${where}`, { title: $('title').value, description: $('desc').value,
+      privacy: privacy === 'schedule' ? 'private' : privacy, publish_at, synthetic: $('synthetic').checked });
+    for (;;) {
+      await new Promise(r => setTimeout(r, 2000));
+      const j = await api(`/api/jobs/${job}`);
+      log.textContent = head + j.log.join('\n');
+      if (j.state === 'done') { log.textContent += `\n✓ Posted to ${name}`; return true; }
+      if (j.state === 'error') { log.textContent += `\n✗ ${name}: ${j.error}`; toast(`${name}: ${j.error}`, 8000); return false; }
+    }
+  } catch (e) { log.textContent += `\n✗ ${name}: ${e.message}`; toast(`${name}: ${e.message}`, 8000); return false; }
+}
+
+// post to one or both; YouTube goes first, and a failure stops the rest so they stay in step
+async function post(wheres) {
+  let publish_at = '';
+  if (wheres.includes('youtube') && privacy === 'schedule') {
+    if (!$('when').value) return toast('Pick when it should go public');
+    publish_at = new Date($('when').value).toISOString();
+  }
+  const vis = { youtube: privacy === 'schedule' ? `scheduled for ${new Date($('when').value).toLocaleString()}` : privacy,
+                instagram: 'public on your profile straight away' };
+  const lines = wheres.map(w => `• ${NAMES[w]} (${vis[w]})`).join('\n');
+  const again = wheres.filter(w => cur.posted && cur.posted[w])
+    .map(w => `\nAlready posted to ${NAMES[w]} on ${cur.posted[w].at}.`).join('');
+  if (!confirm(`Post "${$('title').value}" to:\n${lines}${again ? '\n' + again : ''}`)) return;
+  busy = true; buttons();
+  const log = $('log'); log.style.display = 'block'; log.textContent = '';
+  let ok = 0;
+  for (const w of wheres) {
+    if (!(await runJob(w, publish_at, log))) {
+      const rest = wheres.slice(wheres.indexOf(w) + 1).map(x => NAMES[x]);
+      if (rest.length) log.textContent += `\nStopped: ${rest.join(', ')} not posted.`;
+      break;
+    }
+    ok++;
+  }
+  if (ok === wheres.length) toast(wheres.length > 1 ? 'Posted to YouTube and Instagram' : `Posted to ${NAMES[wheres[0]]}`);
+  busy = false; await load();
+}
+
+$('title').oninput = $('desc').oninput = counts;
+$('save').onclick = async () => { await api(`/api/episode/${cur.name}/save`, { title: $('title').value, description: $('desc').value });
+  toast('Saved'); load(); };
+$('privacy').onclick = e => { const b = e.target.closest('button'); if (!b) return;
+  privacy = b.dataset.v; [...$('privacy').children].forEach(x => x.classList.toggle('sel', x === b));
+  $('sched-box').style.display = privacy === 'schedule' ? 'block' : 'none'; };
+$('post-both').onclick = () => post(['youtube', 'instagram']);
+$('download').onclick = () => { if (cur) window.location.href = '/download/' + encodeURIComponent(cur.name); };
+$('copy-tt').onclick = async () => {        // title, a blank line, the description (YouTube's #Shorts tag left out)
+  const text = ($('title').value.trim() + '\n\n' + $('desc').value.trim()).replace(/[ \t]*#shorts\b/gi, '').trim();
+  try { await navigator.clipboard.writeText(text); }
+  catch { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+  const b = $('copy-tt'), was = b.textContent; b.textContent = '✓ Copied'; setTimeout(() => b.textContent = was, 1500);
+};
+$('post-yt').onclick = () => post(['youtube']);
+$('post-ig').onclick = () => post(['instagram']);
+const q = new URLSearchParams(location.search);
+if (q.get('error')) toast('Login failed: ' + q.get('error'), 8000);
+if (q.get('connected')) toast(`${q.get('connected') === 'youtube' ? 'YouTube' : 'Instagram'} connected`);
+if (q.toString()) history.replaceState(null, '', '/');
+load();
+setInterval(() => { if (!busy && document.visibilityState === 'visible' && cur && (cur.draft || !cur.video)) load(true); }, 15000);
+</script>
+</body>
+</html>

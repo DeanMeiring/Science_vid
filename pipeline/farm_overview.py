@@ -146,3 +146,21 @@ def build_upto8():
     fid[h - 4:h + 4, h + ox - 8:h + ox + 11][rgba[h - 4:h + 4, h + ox - 8:h + ox + 11, 3] > 0] = 8
     boxes[8] = (ox - 7, -3, ox + 9, 3)
     return rgba, fid, boxes, barn
+
+# ---------------- the farm after Experiment 9 (for Experiment 10's zoom out) ----------------
+# #9 (Joe and three helpers, all home on a spotless field) at +220, 0 from Experiment 4's field: just the
+# four of them, a dot each in their colours; #10 (the chicken's triangle and square) at about +240, +80.
+MORE10 = {9: dict(title="Experiment #9", sub="3 helpers: all home!"), 10: dict(title="Experiment #10", sub="today: the chicken")}
+
+def build_upto9():
+    """build_upto8(), plus Experiment 9's four farmers (a dot each) painted in."""
+    import helpers as HP
+    rgba, fid, boxes, barn = build_upto8()
+    h = SZ // 2; ox = 220
+    cols = ((120, 190, 255), (255, 214, 64), (255, 110, 96), (255, 150, 200))     # Joe, Daisy, the cow, the pig
+    for (x, y, _), col in zip(HP.THREE_HELPERS, cols):
+        rgba[h + y - 1:h + y + 1, h + ox + x - 1:h + ox + x + 1, :3] = np.array(col) / 255
+        rgba[h + y - 1:h + y + 1, h + ox + x - 1:h + ox + x + 1, 3] = 1
+        fid[h + y - 1:h + y + 1, h + ox + x - 1:h + ox + x + 1] = 9
+    boxes[9] = (ox - 8, -5, ox + 8, 5)
+    return rgba, fid, boxes, barn

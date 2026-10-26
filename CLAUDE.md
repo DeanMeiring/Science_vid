@@ -19,7 +19,13 @@
   Railway). It's a library of methods to reuse here. Copy what's needed;
   don't import across repos.
 
-## Where we left off (end of 25 Oct 2026, ~23:00)
+## Where we left off (26 Oct 2026, midday)
+- **Done for the day after Experiments 10 and 11** were posted (Dean: "wrap up for today"). Open: TikTok for 9-11
+  by hand; Experiment 9's YouTube Short was private (check it's public); Instagram numbers for 9-11 vs Experiment 8.
+  Next: Experiment 12, Dean's pick; NOT the walking rule again (birthday cows is next in line; also the living
+  crop field (Game of Life), fastest slide, toy tractors, pegboard peas). Episode branches 3-11 stacked, no PRs yet.
+
+## Earlier (end of 25 Oct 2026, ~23:00)
 - **Done for the day after Experiment 9** was posted (Dean: "finish up, going to bed"). Open: Experiment 9's
   YouTube Short is private (make it public), TikTok by hand, check Experiment 9's Instagram numbers vs
   Experiment 8's (1,444 views). Next: Experiment 10, Dean's pick. Episode branches 3-9 stacked, no PRs yet.
@@ -36,7 +42,9 @@
   (code card, reveal words, one "#1-#10" farm label since today's fields dwarf the farm).
   Lesson: far away, flat images must float higher or they flicker into the grass (`lift()`: max(0.4, 2.2 / s)).
   Lesson: `scene.set_tufts` now ignores squares off its grid (crashed when the camera left the 700 grid).
-  **Full render done 26 Oct** (`renders/ep11_codes/ep11_codes.mp4`, 37.9 s, 40 MB). Not posted yet.
+  **Full render done 26 Oct** (`renders/ep11_codes/ep11_codes.mp4`, 37.9 s, 40 MB). **Posted 26 Oct 12:13**, public on
+  both: YouTube https://youtube.com/shorts/IzDD6QqM2JQ and Instagram https://www.instagram.com/reel/De9CuzdFmNz/
+  (40 MB went through Instagram's API fine, so size isn't a problem at least up to there).
   Experiment 12 should NOT be the walking rule again (it's been 1, 2, 5, 9, 11): birthday cows is next in line.
 - **Experiment 10: the chicken and the barns** (26 Oct; Dean picked it from the ideas list: chaos game).
   Branch `claude/episode-10-chicken` (stacked on `claude/episode-9-helpers`). `pipeline/chaos.py` is the sim

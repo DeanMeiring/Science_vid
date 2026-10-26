@@ -35,6 +35,8 @@
   `blender/render_ep10.py`, `pipeline/compose_ep10.py`; ends on the whole farm (`farm_overview.build_upto9()`).
   PermanentMarker has no "ń" (use PatrickHand for Polish names). Draft: Dean "looks very good".
   **Full render done 26 Oct** (`renders/ep10_chicken/ep10_chicken.mp4`, 38.2 s, 19 MB; foreground chunks).
+  **Posted 26 Oct 09:23**, public on both: YouTube https://youtube.com/shorts/MGlR8-cNPXM and Instagram
+  https://www.instagram.com/reel/De8vP9MFAJs/ . TikTok: by hand.
 - **Experiment 9: three helpers** (25 Oct; the viewer's "Get 3 helpers", picked after Experiment 8 did
   worse on Instagram). Branch `claude/episode-9-helpers` (stacked on `claude/episode-8-plant`).
   `pipeline/helpers.py` is the sim; `episodes/ep09_helpers.py` the script (facts in its docstring), voiced in

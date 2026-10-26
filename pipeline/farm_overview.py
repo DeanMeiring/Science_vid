@@ -164,3 +164,20 @@ def build_upto9():
         fid[h + y - 1:h + y + 1, h + ox + x - 1:h + ox + x + 1] = 9
     boxes[9] = (ox - 8, -5, ox + 8, 5)
     return rgba, fid, boxes, barn
+
+# ---------------- the farm after Experiment 10 (for Experiment 11's zoom out) ----------------
+# #10 (the chicken's triangle and four-barn square, 24 squares across) at +240, +80 from Experiment 4's field.
+MORE11 = {10: dict(title="Experiment #10", sub="the chicken's triangle"), 11: dict(title="Experiment #11", sub="today: crop codes")}
+
+def build_upto10():
+    """build_upto9(), plus Experiment 10's footprints (one pixel per square, as seen from far away)."""
+    import chaos as CH
+    rgba, fid, boxes, barn = build_upto9()
+    h = SZ // 2; L = 24
+    sq = CH.SQUARE * np.array([1.0, np.sqrt(3) / 2])
+    for (barns, ox, seed) in ((CH.TRI, 240, 1), (sq, 280, 2)):
+        p, _ = CH.hops(barns, 100_000, seed=seed)
+        px = (h + ox + p[10:, 0] * L).astype(int); py = (h + 80 - p[10:, 1] * L).astype(int)
+        rgba[py, px, :3] = np.array((250, 200, 72)) / 255; rgba[py, px, 3] = 1; fid[py, px] = 10
+    boxes[10] = (238, 80 - L - 2, 280 + L + 2, 82)
+    return rgba, fid, boxes, barn

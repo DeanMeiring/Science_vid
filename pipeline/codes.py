@@ -54,3 +54,20 @@ if __name__ == "__main__":   # re-check every number the episode uses
         ys, xs = np.nonzero(g)
         print(f"{code:13s} {len(xy) - 1:>9,} steps: {len(ys):>7,} squares planted, box {np.ptp(xs) + 1} x {np.ptp(ys) + 1}, "
               f"highway: {'none' if hw is None else f'from step {hw[0]:,}, repeats every {hw[1]} steps, moving {hw[2]}'}", flush=True)
+
+def log(code, steps, n=3001):
+    """Every step, for the animation: (x, y) of the square Joe leaves, the crop he plants there, and where
+    he stands and faces after it (x, y, d), all relative to the start; arrays of length `steps`."""
+    k = len(code); turn = [1 if c == "R" else -1 for c in code]
+    grid = [[0] * n for _ in range(n)]
+    x = y = n // 2; d = 0; o = n // 2
+    cx, cy, cc, px, py, pd = ([0] * steps for _ in range(6))
+    for s in range(steps):
+        row = grid[y]; c = row[x]
+        d = (d + turn[c]) % 4
+        row[x] = (c + 1) % k
+        cx[s], cy[s], cc[s] = x - o, y - o, (c + 1) % k
+        x += DX[d]; y += DY[d]
+        if not (0 < x < n - 1 and 0 < y < n - 1): raise RuntimeError(f"{code} reached the edge at step {s}")
+        px[s], py[s], pd[s] = x - o, y - o, d
+    return {k_: np.array(v, np.int32) for k_, v in dict(cx=cx, cy=cy, cc=cc, px=px, py=py, pd=pd).items()}

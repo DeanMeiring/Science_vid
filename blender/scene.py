@@ -652,6 +652,8 @@ class Scene:
         R = int(1.3 * max(W, H) / s_px) + 2
         gx, gy = np.meshgrid(np.arange(int(cx) - R, int(cx) + R), np.arange(int(cy) - R, int(cy) + R))
         gx, gy = gx.ravel(), gy.ravel()
+        inside = (gx >= 0) & (gx < grid.shape[1]) & (gy >= 0) & (gy < grid.shape[0])
+        gx, gy = gx[inside], gy[inside]          # off the grid: no tufts (and no wrapping round to the far side)
         wheat = grid[gy, gx] == 2
         self._stalks(gx[wheat], gy[wheat], hz[gy[wheat], gx[wheat]] if hz is not None
                      else np.full(int(wheat.sum()), self.heights[2]))

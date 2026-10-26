@@ -26,6 +26,15 @@
 - **Done for the day after Experiment 8** was posted to YouTube and Instagram (Dean: "end for tonight,
   we work tomorrow again"). TikTok: Dean posts by hand. Next: Experiment 9, Dean's pick ("Get 3 helpers"
   is parked below). PRs #3/#4 still wait for Dean; episode branches 3-8 are stacked, no PRs yet.
+- **Experiment 10: the chicken and the barns** (26 Oct; Dean picked it from the ideas list: chaos game).
+  Branch `claude/episode-10-chicken` (stacked on `claude/episode-9-helpers`). `pipeline/chaos.py` is the sim
+  (1,000,000 hops: 0 in the middle hole or any hole to 8 levels; four barns fill the square evenly);
+  `episodes/ep10_chicken.py` (facts and sources in its docstring), voiced in george (34.0 s, "Sher-pinski").
+  New chicken character in `blender/scene.py`; `set_trail_image(cell=...)` for fine footprints (8 px per
+  square). Dean: keep the triangle big, use name plates for Joe and the chicken. `pipeline/ep10_timeline.py`,
+  `blender/render_ep10.py`, `pipeline/compose_ep10.py`; ends on the whole farm (`farm_overview.build_upto9()`).
+  PermanentMarker has no "ń" (use PatrickHand for Polish names). Draft: Dean "looks very good".
+  **Full render done 26 Oct** (`renders/ep10_chicken/ep10_chicken.mp4`, 38.2 s, 19 MB; foreground chunks).
 - **Experiment 9: three helpers** (25 Oct; the viewer's "Get 3 helpers", picked after Experiment 8 did
   worse on Instagram). Branch `claude/episode-9-helpers` (stacked on `claude/episode-8-plant`).
   `pipeline/helpers.py` is the sim; `episodes/ep09_helpers.py` the script (facts in its docstring), voiced in

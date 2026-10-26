@@ -390,6 +390,32 @@ class Scene:
                 a = i * 1.4
                 part("uv_sphere", (-0.215 - 0.012 * i, 0.025 * math.sin(a), 0.3 + 0.025 * math.cos(a)), m=skin,
                      radius=0.012, segments=8, ring_count=4)
+        elif self.character == "chicken":
+            # Experiment 10's chicken: a plump white hen, red comb and wattle, yellow beak and legs; built facing +X
+            self.body.scale = (2.1, 2.1, 2.1)
+            white_f = mat("Feathers", (250, 248, 242), 0.85); red = mat("Comb", (220, 40, 36), 0.5)
+            yellow = mat("Beak", (246, 176, 40), 0.45); eye = mat("Eye", (20, 20, 24), 0.2)
+            shine = _material("EyeShine", lin((255, 255, 255)), emit=(lin((255, 255, 255)), 2.0))[0]
+            for side in (-1, 1):
+                hip = bpy.data.objects.new(f"Hip{side}", None); self.sc.collection.objects.link(hip)
+                hip.parent = self.body; hip.location = (0, side * 0.045, 0.12); self.legs.append(hip)
+                part("cylinder", (0, 0, -0.06), m=yellow, parent=hip, radius=0.012, depth=0.12, vertices=8)
+                for a in (-0.5, 0, 0.5):                                                   # three toes
+                    part("cube", (0.035 * math.cos(a), 0.035 * math.sin(a), -0.118), (0.035, 0.007, 0.004), yellow,
+                         rot=(0, 0, a), parent=hip, size=1)
+            part("uv_sphere", (0, 0, 0.22), (1.25, 0.95, 0.95), white_f, radius=0.11, segments=24, ring_count=12)  # body
+            part("uv_sphere", (0.09, 0, 0.32), (0.9, 0.85, 1.0), white_f, radius=0.065, segments=16, ring_count=8)  # head
+            part("cone", (0.155, 0, 0.315), m=yellow, rot=(0, math.pi / 2, 0), radius1=0.02, radius2=0.0, depth=0.05, vertices=10)
+            part("uv_sphere", (0.13, 0, 0.27), (0.6, 0.5, 1.2), red, radius=0.022, segments=10, ring_count=6)      # wattle
+            for dx, dz, r in ((0.06, 0.385, 0.022), (0.09, 0.39, 0.024), (0.115, 0.375, 0.02)):
+                part("uv_sphere", (dx, 0, dz), (1, 0.6, 1), red, radius=r, segments=10, ring_count=6)            # comb
+            for side in (-1, 1):
+                part("uv_sphere", (0.125, side * 0.04, 0.33), m=eye, radius=0.011, segments=10, ring_count=6)
+                part("uv_sphere", (0.133, side * 0.039, 0.335), m=shine, radius=0.0035, segments=6, ring_count=4)
+                part("uv_sphere", (-0.01, side * 0.1, 0.23), (1.4, 0.35, 0.8), white_f, radius=0.07, segments=12, ring_count=6)  # wings
+            for a in (-0.25, 0, 0.25):                                                       # tail feathers
+                part("uv_sphere", (-0.13, a * 0.1, 0.31), (0.5, 0.25, 1.1), white_f, rot=(a, -0.5, 0), radius=0.06,
+                     segments=10, ring_count=6)
         elif self.theme == "ant":
             am = mat("Ant", (52, 28, 14), 0.3)
             for o_, r, z in ((-0.3, 0.17, 0.16), (0.0, 0.11, 0.15), (0.24, 0.13, 0.16)):
@@ -465,10 +491,11 @@ class Scene:
                                       dict(scale=np.full((n, 3), r), rot=np.zeros((n, 3))))
         bpy.data.meshes.remove(old)
 
-    def set_trail_image(self, rgba, x0, y0, z=0.02, gap=0.07, glow=0.35):
+    def set_trail_image(self, rgba, x0, y0, z=0.02, gap=0.07, glow=0.35, cell=1.0):
         """Paint trails as one image lying on the field (light, however long the trails get).
         rgba: (S, S, 4) floats 0..1 in sRGB, row 0 = grid row y0, column 0 = grid column x0.
-        Each pixel is one square, drawn with a thin grass-coloured gap round it, glowing a little."""
+        Each pixel is one square, drawn with a thin grass-coloured gap round it, glowing a little.
+        cell: squares per pixel (e.g. 0.125 for fine footprints; the gap is set when first made)."""
         S = rgba.shape[0]
         if getattr(self, "_trail_size", None) != S:
             img = bpy.data.images.new("Trail", S, S, alpha=True); img.colorspace_settings.name = "sRGB"
@@ -499,7 +526,7 @@ class Scene:
             if old: bpy.data.objects.remove(old)
             self.trail_plane, self.trail_img, self._trail_size = pl, img, S
         pl = self.trail_plane
-        pl.scale = (S, S, 1); pl.location = (x0 + S / 2, -(y0 + S / 2), z)
+        pl.scale = (S * cell, S * cell, 1); pl.location = (x0 + S * cell / 2, -(y0 + S * cell / 2), z)
         self.trail_img.pixels.foreach_set(np.ascontiguousarray(rgba[::-1], np.float32).ravel())   # Blender rows go bottom-up
         self.trail_img.update()
 

@@ -24,9 +24,9 @@
   Codex reviews via `docs/ep12_review.md` (read it). Sim `pipeline/birthdays.py` (seed 12), script `episodes/ep12_birthdays.py`
   (Codex's shorter version, voiced in george, 32.4 s), `pipeline/ep12_timeline.py`, `blender/render_ep12.py`,
   `pipeline/compose_ep12.py`. Half-size draft sent to Dean; he said "Do it" (full render).
-- **Full render PAUSED** for Dean's 13:00 meeting at 87 of 1,097 frames (~6.5 s/frame, ~2 h left). Resume with the same
-  command in ~9 min foreground chunks: `blender -b -P blender/render_ep12.py` (frames on disk are skipped), then
-  `pipeline/compose_ep12.py`. Nothing pushed or posted.
+- **Full render done 27 Oct 15:05** (`renders/ep12_birthdays/ep12_birthdays.mp4`, 36.6 s, 37 MB), after Codex's overlay
+  fixes (card wording, pair-shot tags). Studio started for Dean to post (Dean: "start the studio... i can post from there").
+  Lesson: Codex and Claude share `docs/ep12_review.md` as the handoff; Claude owns renders.
 
 ## Earlier (26 Oct 2026, midday)
 - **Done for the day after Experiments 10 and 11** were posted (Dean: "wrap up for today"). Open: TikTok for 9-11

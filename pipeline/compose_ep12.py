@@ -90,10 +90,10 @@ def tag(dr, x, y, s, size, a, hot=False, big=False):
     dr.text((x, y + 1), s, font=f, fill=al(INK, a), anchor="mm")
 def date(d): return BD.date(d).upper().lstrip("0")
 
-def tags_fn(sp, herd, a, show_dates, hot, scale):
+def tags_fn(sp, herd, a, show_dates, hot, scale, dim=1.0):
     def fn(dr):
         days = tl.days[herd - 1]
-        order = sorted(range(HERD), key=lambda i: sp["tags"][i][1])            # far ones first, near ones on top
+        order = sorted(range(HERD), key=lambda i: (i in hot, sp["tags"][i][1]))   # far ones first, near ones on top; the pair last
         xy = {i: np.array(sp["tags"][i][:2], float) for i in range(HERD)}
         if len(hot) == 2:                                                      # a pair standing close: push the two tags apart
             a_, b_ = hot; d = xy[b_] - xy[a_]; dist = np.linalg.norm(d) + 1e-9; need = scale * 6
@@ -103,7 +103,7 @@ def tags_fn(sp, herd, a, show_dates, hot, scale):
             if not (-80 < x < W + 80 and -80 < y < H + 80): continue
             big = i in hot
             size = int(scale * (1.5 if big else 1.0))
-            tag(dr, x, y - (20 if big else 0), date(days[i]) if show_dates else "?", size, a, hot=big)
+            tag(dr, x, y - (20 if big else 0), date(days[i]) if show_dates else "?", size, a if big else a * dim, hot=big)
     return fn
 
 # ---------------- captions: phrases from the word timings ----------------
@@ -138,8 +138,8 @@ def caption_fn(words, active):
 def card_fn(n23, a22, a23):
     def fn(dr):
         dr.rounded_rectangle((90, 250, W - 90, 560 if n23 else 420), 28, fill=(250, 244, 226, 235), outline=INK, width=5)
-        dr.text((W / 2, 292), "the maths (exact)", font=HAND(50), fill=(110, 100, 90), anchor="mm")
-        dr.text((W / 2, 370), f"22 cows: {EXACT22:.1%} have a match", font=HAND(66), fill=al(INK, a22), anchor="mm")
+        dr.text((W / 2, 292), "exact chance two share a birthday", font=HAND(50), fill=(110, 100, 90), anchor="mm")
+        dr.text((W / 2, 370), f"22 cows: {EXACT22:.1%}", font=HAND(66), fill=al(INK, a22), anchor="mm")
         if n23: dr.text((W / 2, 470), f"23 cows: {EXACT23:.1%}", font=MARK(70), fill=al((200, 60, 40), a23), anchor="mm")
         if n23: dr.text((W / 2, 530), "more likely than not!", font=HAND(48), fill=al(INK, a23), anchor="mm")
     return fn
@@ -198,16 +198,6 @@ for f in range(tl.nf):
     if tt < 3.6:
         a = pop(tt, 0.3, 3.6, 0.25); jx, jy = sp["joe"][:2]
         comp(img, layer(("pj", g8(jx), g8(jy), q(a)), lambda dr, x=jx, y=jy, a=a: plate(dr, x, y, "Joe", BLUE, a)))
-    # the tags: "?" until "birthdays", then the herd on screen; hidden once the tally has landed
-    a = pop(tt, 0.4, tl.t_land + 0.4, 0.25)
-    if a and sp["shot"] != "pull":
-        show = tt >= tl.t_tags
-        hot = PAIR if (herd == 1 and tl.t_pair <= tt < tl.t_test + 0.3) else ()
-        if herd > 1:                                       # any herd with a match shows its pair(s) red too
-            hot = tuple(sorted({i for p in BD.matches(tl.days[herd - 1]) for i in p}))
-        scale = max(24, min(46, sp["s"] * 0.34))
-        comp(img, layer(("tags", herd, show, hot, q(a * (0.6 if racing else 1)), tuple(g8(v) for t in sp["tags"] for v in t[:2]), int(scale)),
-                        tags_fn(sp, herd, a * (0.6 if racing else 1), show, hot, scale)))
     # herd 1's pair: one example, not proof
     a = pop(tt, tl.t_pair + 0.2, tl.t_test + 0.3)
     if a:
@@ -216,6 +206,17 @@ for f in range(tl.nf):
             dr.line([(ax, ay - 20), (bx, by - 20)], fill=al(INK, a), width=13), dr.line([(ax, ay - 20), (bx, by - 20)], fill=al(RED, a), width=7),
             text(dr, (W / 2, 300), "same birthday!", MARK(84), al(GOLD, a), 7),
             text(dr, (W / 2, 390), "(herd #1: just one example)", HAND(54), al(WHITE, a), 5))))
+    # the tags: "?" until "birthdays", then the herd on screen; hidden once the tally has landed
+    a = pop(tt, 0.4, tl.t_land + 0.4, 0.25)
+    if a and sp["shot"] != "pull":
+        show = tt >= tl.t_tags
+        hot = PAIR if (herd == 1 and tl.t_pair <= tt < tl.t_test + 0.3) else ()
+        if herd > 1:                                       # any herd with a match shows its pair(s) red too
+            hot = tuple(sorted({i for p in BD.matches(tl.days[herd - 1]) for i in p}))
+        scale = max(24, min(46, sp["s"] * 0.34))
+        dim = 1 - 0.65 * pop(tt, tl.t_pair + 0.2, tl.t_test + 0.3) if herd == 1 else 1.0     # the pair shot: the others fade back
+        comp(img, layer(("tags", herd, show, hot, q(a * (0.6 if racing else 1)), q(dim), tuple(g8(v) for t in sp["tags"] for v in t[:2]), int(scale)),
+                        tags_fn(sp, herd, a * (0.6 if racing else 1), show, hot, scale, dim)))
     # the exact cards on "22" and "23:"
     if tl.t_card22 - 0.1 <= tt < tl.t_pair:
         a22 = min(1.0, (tt - tl.t_card22 + 0.1) / 0.2); a23 = float(np.clip((tt - tl.t_card23) / 0.2, 0, 1))

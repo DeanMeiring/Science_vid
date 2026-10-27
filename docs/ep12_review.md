@@ -219,3 +219,28 @@ and build up, not all 253 at full strength, and no probability is computed from 
 - Ran: 8 preview stills (half size), then a sparse half-size draft (`--scale 50 --every 3`, 366 frames, ~3.6 s/frame
   with the 1 s pause, 3 foreground chunks), then `compose_ep12.py --draft`: `renders/ep12_birthdays/ep12_birthdays_draft.mp4`, 36.6 s.
 - Not run: the full render (asking Dean first; estimate ~2-2.5 h in ~9 min chunks). Nothing pushed or published.
+
+### Codex build review (27 Oct 2026, checkout db79365)
+
+Reviewed the new timeline, renderer, compositor, revised episode and opt-in alignment change. Ran the timeline CLI and lightweight assertions for monotone herd progression, final 50,617/100,000 tally, maximum 253 pair lines, valid word intervals, and old/new numeric normalization. These checks pass. Earlier mathematical and model-wording corrections are incorporated. Duration is 36.6 seconds / 1,097 frames.
+
+Extracted and visually inspected five frames from the EXISTING draft at 13, 15.7, 23, 27 and 35.5 seconds. Review stills are in gitignored `renders/ep12_birthdays/codex_review/`. This was video decoding only, not Blender or composition. The exact/simulated comparison, highlighted dates, pair diagram and farm labels are generally readable in these samples. Full playback, sound and final full-resolution output still need Dean's review.
+
+**One correction before final composition:** `card_fn()` in `pipeline/compose_ep12.py` currently prints "22 cows: 47.6% have a match". That reads as a percentage of cows, rather than the proportion of herds. Use "22 cows: 47.6% chance of a match" (wrap/resize to fit), or a shared heading "chance of any birthday match" and short rows "22 cows: 47.6%" / "23 cows: 50.7%". This only changes the overlay: existing Blender frames remain reusable.
+
+**Minor visual polish:** at 15.7 seconds, the connecting line crosses the lower red "30 AUG" tag, and a yellow "17 APR" tag overlaps its upper-left corner. Both dates can still be read, but draw the highlighted tags after the connecting line and either fade nonmatching tags during the pair shot or move the overlapping tag. This is also a compositor-only fix; no need to restart Blender.
+
+Operational note: CLAUDE.md now records Dean's full-render approval and a pause at 87 frames. A Blender process was present during review and 87 full-size frames were on disk at the count. Codex did not stop, resume or launch any render, alter production code, compose, push or publish. Claude should own render execution and verify its current process state before starting another instance. The earlier handoff scope/status paragraphs are historical and should be updated by Claude to reflect the later approvals.
+
+Handoff: please make the overlay wording correction, consider the small tag/line polish, and record final output checks here when production completes. No new mathematical blocker found.
+
+### Claude: final output (27 Oct 2026, 15:05)
+
+- Codex's build review applied (compose only, no Blender rerun): the card now reads "exact chance two share a birthday"
+  with rows "22 cows: 47.6%" / "23 cows: 50.7%"; in the pair shot the connecting line is drawn under the tags, the
+  red pair tags are drawn last, and the other tags fade back.
+- Full render: 1,097 / 1,097 frames, every one in screen.json (checked), in ~9 min foreground chunks with a pause for
+  Dean's meeting. `compose_ep12.py`: `renders/ep12_birthdays/ep12_birthdays.mp4`, 36.6 s, 37 MB.
+- Checked stills at 13.2 s (card), 15.8 s (pair), 23 s (tally 50,617 / 100,000, simulated 50.6% vs exact 50.7%),
+  36 s (farm labels #1-#10, #11, #12).
+- Studio started on localhost:8765 for Dean to watch and post. Nothing posted by Claude.

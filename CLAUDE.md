@@ -29,10 +29,13 @@
   Ep11 52; 15 followers (views need `instagram_manage_insights`, not requested).
   Read: the best (Ep3 sheep, Ep4 two farmers, Ep9 helpers) are a clear yes/no question with Daisy or helpers, and
   two of them came from viewer comments. Weakest on Instagram: Ep10 chicken, Ep6 barns.
-- **Ideas offered for Experiment 13 (Dean picks):** 1) Daisy vs a bird, the 3D random walk (a viewer asked "shouldn't
-  they all come home at infinity?"; facts already checked: 2D always, 3D ~34%; Kakutani's drunk bird); 2) monkey-typing
-  cows: how long to type MOO at random (a viewer's infinite-monkeys joke; check by simulation); 3) the fastest slide
-  (brachistochrone race); 4) the Ep5 comment's moves (straight / right / back / left): a walking rule, so later.
+- **Agenda (Dean, 27 Oct: "like 2 and 3 and 4"), talk again tomorrow; Dean picks the order:**
+  1. **Can a cow type MOO?** Random keys until it spells a word, counter racing up (a viewer's infinite-monkeys
+     joke on Experiment 2). Check every number by simulation first.
+  2. **The fastest slide** (brachistochrone): Joe races carts down a straight ramp and a curved one; the curve wins.
+  3. **A viewer's moves** (comment on Experiment 5): "first you go straight, the second right, the third backwards,
+     the last left": a 4-crop walking rule with straight and U-turns. Walking rule again, so not back to back with Ep11.
+  Not picked: Daisy vs a bird (3D random walk), parked.
 - **Experiment 12: birthday cows** (the birthday paradox), branch `claude/episode-12-birthdays` from `origin/main`.
   Codex reviews via `docs/ep12_review.md` (read it). Sim `pipeline/birthdays.py` (seed 12), script `episodes/ep12_birthdays.py`
   (Codex's shorter version, voiced in george, 32.4 s), `pipeline/ep12_timeline.py`, `blender/render_ep12.py`,

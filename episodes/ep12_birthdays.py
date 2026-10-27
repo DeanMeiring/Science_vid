@@ -18,7 +18,10 @@ Facts checked (pipeline/birthdays.py, seed 12 fixed before looking, 100,000 herd
 - One particular cow is a different question: it first passes 50% with 253 OTHER cows (254 in all;
   50.05%; with 22 others only 5.86%). Description only: left out of the narration so the two 253s aren't confused.
 - The cakes: one per herd with a match = 50,617, said as "over fifty thousand".
-- NOT claimed: anything about real cows' birthdays (they cluster in calving season).
+- Calving-season caveat (description): one made-up example season, 80% of births in 90 days: 23 cows
+  match 85.0% of the time (SE 0.11%), vs 50.7% for equally likely days. The general result (equally likely
+  days give the LOWEST chance) is from memory: source to confirm before we cite it; not cited now.
+- NOT claimed: anything about real herds' birthday spread.
 """
 
 EXPERIMENT = 12
@@ -45,7 +48,7 @@ With just 23 cows, it's more likely than not that two share a birthday. The exac
 
 Why so few? 23 cows make 253 possible pairs, and any pair can match. That's a different question from "does another cow share MY cow's birthday?" For that, you'd need 253 other cows (254 in all) to pass 50%.
 
-The model: every birthday is independent and equally likely, over 365 days (leap day left out). Real cows aren't like that; many farms have a calving season, and uneven birthdays make shared birthdays even more likely.
+The model: every birthday is independent and equally likely, over 365 days (leap day left out). Real cows aren't like that; many farms have a calving season, and bunching births into one season makes a shared birthday more likely, not less.
 
 Narration voice: Kyutai Pocket TTS, voice from the VCTK corpus (CC-BY-4.0).
 

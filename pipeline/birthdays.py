@@ -82,3 +82,10 @@ if __name__ == "__main__":   # re-check every number the episode uses
     for m in (22, 252, 253):
         print(f"  with {m} other cows: {exact_particular(m):.2%}")
     print(f"  first above 50%: {smallest(exact_particular)} other cows ({smallest(exact_particular) + 1} in all)")
+    # the description's caveat: uneven birthdays (a calving season) make a match MORE likely. One made-up example
+    # season, not real data: 80% of births in a 90-day spring, the rest spread over the other 275 days.
+    w = np.where(np.arange(DAYS) < 90, 0.8 / 90, 0.2 / 275)
+    rng = np.random.default_rng([SEED, 999])
+    m = has_match(rng.choice(DAYS, (TRIALS, 23), p=w).astype(np.int16)).mean()
+    print(f"\nexample calving season (80% of births in 90 days), 23 cows: {m:.1%} have a match "
+          f"(SE {np.sqrt(m * (1 - m) / TRIALS):.2%}); equally likely days: {exact(23):.1%}")

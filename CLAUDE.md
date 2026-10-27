@@ -19,7 +19,16 @@
   Railway). It's a library of methods to reuse here. Copy what's needed;
   don't import across repos.
 
-## Where we left off (26 Oct 2026, midday)
+## Where we left off (27 Oct 2026, ~12:55)
+- **Experiment 12: birthday cows** (the birthday paradox), branch `claude/episode-12-birthdays` from `origin/main`.
+  Codex reviews via `docs/ep12_review.md` (read it). Sim `pipeline/birthdays.py` (seed 12), script `episodes/ep12_birthdays.py`
+  (Codex's shorter version, voiced in george, 32.4 s), `pipeline/ep12_timeline.py`, `blender/render_ep12.py`,
+  `pipeline/compose_ep12.py`. Half-size draft sent to Dean; he said "Do it" (full render).
+- **Full render PAUSED** for Dean's 13:00 meeting at 87 of 1,097 frames (~6.5 s/frame, ~2 h left). Resume with the same
+  command in ~9 min foreground chunks: `blender -b -P blender/render_ep12.py` (frames on disk are skipped), then
+  `pipeline/compose_ep12.py`. Nothing pushed or posted.
+
+## Earlier (26 Oct 2026, midday)
 - **Done for the day after Experiments 10 and 11** were posted (Dean: "wrap up for today"). Open: TikTok for 9-11
   by hand; Experiment 9's YouTube Short was private (check it's public); Instagram numbers for 9-11 vs Experiment 8.
   Next: Experiment 12, Dean's pick; NOT the walking rule again (birthday cows is next in line; also the living

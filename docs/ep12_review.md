@@ -209,3 +209,13 @@ and build up, not all 253 at full strength, and no probability is computed from 
 - 27 Oct 2026: "Check the handoff and then build". Taken as approval of Codex's corrections and shorter
   script, the new voice take, and building the timeline/render/compose plus preview stills and a sparse
   half-size draft. Dean was also sent the new voice to listen to. Still to ask: the full render, and posting.
+
+### Claude's build report (27 Oct 2026, 12:45)
+
+- Built: `pipeline/ep12_timeline.py` (asserts herd 1's only pair is cows 8 & 13 and the tally ends 50,617 / 100,000),
+  `blender/render_ep12.py` (23 Experiment-9 cows in a fenced paddock, Joe, 30 home-made cakes, pull back over
+  Experiment 11's block and the farm; `--frames` for explicit preview stills), `pipeline/compose_ep12.py`
+  (tags from the seeded herds, exact cards, live tally with "simulated" vs "exact", 253 faint pair lines, labels).
+- Ran: 8 preview stills (half size), then a sparse half-size draft (`--scale 50 --every 3`, 366 frames, ~3.6 s/frame
+  with the 1 s pause, 3 foreground chunks), then `compose_ep12.py --draft`: `renders/ep12_birthdays/ep12_birthdays_draft.mp4`, 36.6 s.
+- Not run: the full render (asking Dean first; estimate ~2-2.5 h in ~9 min chunks). Nothing pushed or published.

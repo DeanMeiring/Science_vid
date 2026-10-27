@@ -19,7 +19,20 @@
   Railway). It's a library of methods to reuse here. Copy what's needed;
   don't import across repos.
 
-## Where we left off (27 Oct 2026, ~12:55)
+## Where we left off (27 Oct 2026, ~15:20)
+- **Done for the day after Experiment 12** was posted (Dean: "we posted finish up"). **Posted 27 Oct 15:06**, public on
+  both: YouTube https://youtube.com/shorts/ygktb9u_cqY and Instagram https://www.instagram.com/reel/De_7TgIEmTI/
+  Branch `claude/episode-12-birthdays` pushed (no PR yet). Open: TikTok by hand.
+- **Stats 27 Oct ~15:15** (read-only via the studio's logins): YouTube took off from Experiment 8 (24 Oct): views
+  Ep1-7 6-13 each; Ep8 1,125, Ep9 1,524, Ep10 1,461, Ep11 1,365; channel 5,410 views, 8 subscribers. Experiment 9 is
+  public now. Instagram likes: Ep1 28, Ep2 53, Ep3 169, Ep4 189, Ep5 30, Ep6 22, Ep7 27, Ep8 30, Ep9 69, Ep10 21,
+  Ep11 52; 15 followers (views need `instagram_manage_insights`, not requested).
+  Read: the best (Ep3 sheep, Ep4 two farmers, Ep9 helpers) are a clear yes/no question with Daisy or helpers, and
+  two of them came from viewer comments. Weakest on Instagram: Ep10 chicken, Ep6 barns.
+- **Ideas offered for Experiment 13 (Dean picks):** 1) Daisy vs a bird, the 3D random walk (a viewer asked "shouldn't
+  they all come home at infinity?"; facts already checked: 2D always, 3D ~34%; Kakutani's drunk bird); 2) monkey-typing
+  cows: how long to type MOO at random (a viewer's infinite-monkeys joke; check by simulation); 3) the fastest slide
+  (brachistochrone race); 4) the Ep5 comment's moves (straight / right / back / left): a walking rule, so later.
 - **Experiment 12: birthday cows** (the birthday paradox), branch `claude/episode-12-birthdays` from `origin/main`.
   Codex reviews via `docs/ep12_review.md` (read it). Sim `pipeline/birthdays.py` (seed 12), script `episodes/ep12_birthdays.py`
   (Codex's shorter version, voiced in george, 32.4 s), `pipeline/ep12_timeline.py`, `blender/render_ep12.py`,

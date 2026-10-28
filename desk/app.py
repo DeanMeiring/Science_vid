@@ -236,14 +236,17 @@ def chat_new(n: NewChat):
 @app.get("/api/chats/{cid}")
 def chat_get(cid: str):
     if cid not in CC.CHATS: raise HTTPException(404, "no such chat")
-    return {k: v for k, v in CC.CHATS[cid].items() if not k.startswith("_")}
+    return public(CC.CHATS[cid])
 
 @app.post("/api/chats/{cid}/send")
 async def chat_send(cid: str, m: Send):
     c = CC.CHATS.get(cid)
     if not c: raise HTTPException(404, "no such chat")
-    if c["status"] == "running": raise HTTPException(409, "still working in this chat: wait or press Stop")
     if not m.prompt.strip(): raise HTTPException(400, "type a message first")
+    mod = XC if c.get("agent") == "codex" else CC
+    if c["status"] == "running":                 # working: the message reaches it mid-turn
+        if await mod.steer(c, m.prompt.strip(), m.files): return {"ok": True, "steered": True}
+        raise HTTPException(409, "it's just finishing: send it again in a moment")
     c["status"] = "running"           # at once, so a second click is refused
     mod = XC if c.get("agent") == "codex" else CC
     task = asyncio.create_task(mod.turn(c, m.prompt.strip(), m.files)); TASKS.add(task); task.add_done_callback(TASKS.discard)
@@ -285,7 +288,8 @@ def get_pair(pid):
     return p
 
 def public(c):
-    return {k: v for k, v in c.items() if not k.startswith("_")} if c else None
+    """A chat for the page: without live state, plus the text it's writing right now."""
+    return {**{k: v for k, v in c.items() if not k.startswith("_")}, "live": c.get("_live", "")} if c else None
 
 @app.get("/api/pairs")
 def pairs():
@@ -304,17 +308,39 @@ def pair_get(pid: str):
 @app.post("/api/pairs/{pid}/send")
 async def pair_send(pid: str, m: PairSend):
     p = get_pair(pid)
-    if pid in PC.TASKS: raise HTTPException(409, "they're collaborating: wait or press Stop")
     to = ["claude", "codex"] if m.to == "both" else [m.to]
     if any(a not in ("claude", "codex") for a in to): raise HTTPException(400, "both, claude or codex")
-    if not m.prompt.strip(): raise HTTPException(400, "type a message first")
+    text = m.prompt.strip()
+    if not text: raise HTTPException(400, "type a message first")
+    together = pid in PC.TASKS or (p.get("collab") or {}).get("state") == "review"
+    if p["title"] == "Claude + Codex": p["title"] = "Claude + Codex: " + text.splitlines()[0][:50]; PC.save()
+    how = {}
     for a in to:
-        if PC.chat(p, a)["status"] == "running": raise HTTPException(409, f"{NAME[a]} is still working: wait or press Stop")
-    if p["title"] == "Claude + Codex": p["title"] = "Claude + Codex: " + m.prompt.strip().splitlines()[0][:50]; PC.save()
-    for a in to:
-        c = PC.chat(p, a); c["status"] = "running"
-        task = asyncio.create_task(PC.MOD[a].turn(c, m.prompt.strip(), m.files)); TASKS.add(task); task.add_done_callback(TASKS.discard)
-    return {"ok": True}
+        c = PC.chat(p, a)
+        if c["status"] == "running" and await PC.MOD[a].steer(c, text, m.files):
+            how[a] = "now"                       # working: it gets it mid-turn
+        elif together:
+            PC.queue(p, a, text, m.files); how[a] = "next turn"
+        elif c["status"] == "running":
+            raise HTTPException(409, f"{NAME[a]} is just finishing: send it again in a moment")
+        else:
+            c["status"] = "running"; how[a] = "new turn"
+            task = asyncio.create_task(PC.MOD[a].turn(c, text, m.files)); TASKS.add(task); task.add_done_callback(TASKS.discard)
+    return {"ok": True, "how": how}
+
+class ProgressAsk(BaseModel):
+    kind: str                    # chat / pair
+    id: str
+
+@app.post("/api/progress")
+async def progress(m: ProgressAsk):
+    """A short plain-language progress update, written by a quick Claude model from the live log."""
+    if m.kind == "pair": digest = PC.digest_pair(get_pair(m.id))
+    elif m.id in CC.CHATS: digest = PC.digest_chat(CC.CHATS[m.id])
+    else: raise HTTPException(404, "no such chat")
+    try: text = await PC.summarise(digest)
+    except Exception as ex: raise HTTPException(500, f"couldn't get a summary: {ex}")
+    return {"text": text, "at": time.time()}
 
 @app.post("/api/pairs/{pid}/collab")
 async def pair_collab(pid: str, m: Collab):
@@ -350,7 +376,7 @@ class Review(BaseModel):
     notes: str = ""
 
 @app.post("/api/pairs/{pid}/review")
-def pair_review(pid: str, m: Review):
+async def pair_review(pid: str, m: Review):
     if m.action not in ("continue", "stop"): raise HTTPException(400, "continue or stop")
     if not PC.review(get_pair(pid), m.action, m.notes): raise HTTPException(409, "they aren't waiting for a review")
     return {"ok": True}

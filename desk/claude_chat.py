@@ -11,7 +11,7 @@ import asyncio, json, re, shutil, time, uuid
 from pathlib import Path
 
 from claude_agent_sdk import (AssistantMessage, ClaudeAgentOptions, ClaudeSDKClient, HookMatcher, PermissionResultAllow,
-                              PermissionResultDeny, ResultMessage, SystemMessage, TextBlock, ToolResultBlock,
+                              PermissionResultDeny, ResultMessage, StreamEvent, SystemMessage, TextBlock, ToolResultBlock,
                               ToolUseBlock, UserMessage)
 
 HERE = Path(__file__).resolve().parent
@@ -146,18 +146,29 @@ async def turn(chat, prompt, files):
         cwd=str(chat.get("cwd") or ROOT), cli_path=shutil.which("claude"), permission_mode="default", resume=chat["session_id"],
         can_use_tool=make_permission(chat), setting_sources=["user", "project", "local"],
         system_prompt={"type": "preset", "preset": "claude_code", "append": GUARD + chat.get("guard_extra", "")},
-        hooks={"PreToolUse": [HookMatcher(matcher=None, hooks=[guard_hook])]})
-    t0 = time.time(); tools = {}
+        hooks={"PreToolUse": [HookMatcher(matcher=None, hooks=[guard_hook])]}, include_partial_messages=True)
+    t0 = time.time(); tools = {}; chat["_steered"] = 0
     try:
         async with ClaudeSDKClient(opts) as client:
             RUNNING[chat["id"]] = client
             await client.query(full)
-            async for m in client.receive_response():
+            it = client.receive_messages().__aiter__()
+            while True:
+                try:
+                    m = await (asyncio.wait_for(it.__anext__(), 4) if chat.get("_after_result") else it.__anext__())
+                except (StopAsyncIteration, asyncio.TimeoutError):
+                    break                                   # finished (and no message from Dean started more work)
+                chat["_after_result"] = False
+                if isinstance(m, StreamEvent):              # Claude's words as it writes them
+                    ev = m.event or {}
+                    if ev.get("type") == "content_block_delta" and (ev.get("delta") or {}).get("type") == "text_delta":
+                        chat["_live"] = chat.get("_live", "") + ev["delta"].get("text", "")
+                    continue
                 if isinstance(m, SystemMessage) and m.subtype == "init":
                     chat["session_id"] = (getattr(m, "data", None) or {}).get("session_id") or chat["session_id"]
                 elif isinstance(m, AssistantMessage):
                     for b in m.content:
-                        if isinstance(b, TextBlock) and b.text.strip(): add(chat, "text", text=b.text)
+                        if isinstance(b, TextBlock) and b.text.strip(): add(chat, "text", text=b.text); chat["_live"] = ""
                         elif isinstance(b, ToolUseBlock): tools[b.id] = add(chat, "tool", what=describe(b.name, b.input), out=None, ok=None)
                 elif isinstance(m, UserMessage) and isinstance(m.content, list):
                     for b in m.content:
@@ -169,6 +180,8 @@ async def turn(chat, prompt, files):
                     chat["session_id"] = m.session_id or chat["session_id"]
                     stopped = chat["events"][-1].get("text") == "Stopped by Dean."
                     if m.is_error and m.subtype != "success" and not stopped: add(chat, "error", text=m.result or m.subtype)
+                    if not chat["_steered"] or stopped: save(); break
+                    chat["_steered"] = 0; chat["_after_result"] = True   # Dean wrote mid-turn: it may carry on
                 save()
         add(chat, "done", seconds=round(time.time() - t0))
     except asyncio.CancelledError:
@@ -176,10 +189,20 @@ async def turn(chat, prompt, files):
     except Exception as ex:
         add(chat, "error", text=f"{type(ex).__name__}: {ex}"[:2000])
     finally:
-        RUNNING.pop(chat["id"], None)
+        RUNNING.pop(chat["id"], None); chat["_live"] = ""; chat["_after_result"] = False
         for pid, (cid, fut) in list(PERMS.items()):
             if cid == chat["id"] and not fut.done(): fut.set_result("deny")
         chat["status"] = "idle"; save()
+
+async def steer(chat, text, files=()):
+    """A message from Dean while Claude is working: it reaches Claude mid-turn, like a message to Claude Code."""
+    client = RUNNING.get(chat["id"])
+    if not client: return False
+    full = text + ("\n\nFiles I attached: " + ", ".join(f"desk/uploads/{f}" for f in files) if files else "")
+    add(chat, "dean", text=text, files=list(files), how="sent while working"); save()
+    await client.query("Dean, while you were working: " + full)
+    chat["_steered"] = chat.get("_steered", 0) + 1
+    return True
 
 async def stop(chat_id):
     client = RUNNING.get(chat_id)

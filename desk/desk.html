@@ -624,7 +624,7 @@ function drawOpen() {
       $("#stop-" + a).hidden = !r || collab;
       const u = data.usage?.[a];
       $("#use-" + a).textContent = u ? [u.pct != null ? `${Math.round(u.pct)}% of ${{ five_hour: "5-hour", seven_day: "weekly" }[u.window] || "its"} limit` : "",
-                                        `${toks(u.read + u.wrote)} tokens`].filter(Boolean).join(" · ") : "";
+                                        `${toks(u.read + u.wrote)} new`, u.cached ? `${toks(u.cached)} re-read` : ""].filter(Boolean).join(" · ") : "";
       if (col?.away?.agent === a) $("#use-" + a).textContent += " · out of usage";
     }
     const ms = $("#model-claude");

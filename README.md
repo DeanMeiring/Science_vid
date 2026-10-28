@@ -122,7 +122,10 @@ installs, deletes, the network and anything outside the folder still do. Nobody 
 They split the work as evenly as they can: each side of the page shows how much of its usage limit is used (as
 Claude and Codex report it) and the tokens it has spent on this build, and every turn starts with a USAGE line
 for both, so whoever has used less takes the next heavy task. Claude's model can be switched on its side (Sonnet
-stretches Claude's limit further than Opus). If one hits its usage limit, the other carries on alone (Codex
+stretches Claude's limit further than Opus). After each phase (and on Carry on) both start a fresh session with a
+short handover (the task, the phases done, your notes, where to read the rest): every step re-sends the whole chat,
+so a long one gets expensive (one turn on a ~195k-token chat re-read ~1.9M tokens). The counters show new tokens
+and re-read (cached) ones apart; re-read ones count far less towards the limit. If one hits its usage limit, the other carries on alone (Codex
 leaves the commits and renders for Claude) and hands back when the limit resets; only if both are out does the
 build pause, instead of passing turns back and forth. **Carry on the build** picks a stopped or paused build up again in the same folder and branch,
 with what you type in the box as notes. When a build has made a video, **Open the posting studio** starts the

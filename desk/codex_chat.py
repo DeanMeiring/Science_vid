@@ -117,9 +117,10 @@ def rate_limits(snap):
 
 def tokens(chat, tid, total):
     """Codex reports each thread's running total: add what's new since the last report."""
-    seen = chat.setdefault("cx_seen", {}).get(tid) or [0, 0]
-    now = [total.get("inputTokens") or 0, total.get("outputTokens") or 0]
-    CC.add_tokens(chat, max(0, now[0] - seen[0]), max(0, now[1] - seen[1]))
+    seen = (chat.setdefault("cx_seen", {}).get(tid) or []) + [0, 0, 0]
+    cached = total.get("cachedInputTokens") or 0                # inputTokens includes the cached part
+    now = [(total.get("inputTokens") or 0) - cached, total.get("outputTokens") or 0, cached]
+    CC.add_tokens(chat, *(max(0, n - o) for n, o in zip(now, seen)))
     chat["cx_seen"][tid] = now
 
 async def approve(chat, method, p):

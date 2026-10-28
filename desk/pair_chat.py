@@ -105,8 +105,13 @@ def usage(p):
         wins = [(n, w) for n, w in CC.LIMITS[a].items() if w.get("used") is not None and (w.get("resets") or now + 1) > now]
         n, w = max(wins, key=lambda x: x[1]["used"]) if wins else (None, {})
         tok = (chat(p, a) or {}).get("tokens") or {}
-        out[a] = dict(pct=w.get("used"), window=n, resets=w.get("resets"), read=tok.get("read", 0), wrote=tok.get("wrote", 0))
+        out[a] = dict(pct=w.get("used"), window=n, resets=w.get("resets"), read=tok.get("read", 0),
+                      wrote=tok.get("wrote", 0), cached=tok.get("cached", 0))
     return out
+
+def cost(x):
+    """Roughly what a build's tokens weigh against a usage limit: re-read (cached) tokens count about a tenth."""
+    return x["read"] + 5 * x["wrote"] + x["cached"] / 10
 
 def kilo(n):
     return f"{n / 1e6:.1f}M" if n >= 1e6 else f"{round(n / 1e3)}k"
@@ -117,14 +122,14 @@ def balance_note(p):
     for a in ("claude", "codex"):
         x = u[a]; bits = []
         if x["pct"] is not None: bits.append(f"{x['pct']:.0f}% of its {WINDOW.get(x['window'], x['window'])} limit used")
-        bits.append(f"{kilo(x['read'] + x['wrote'])} tokens in this build")
+        bits.append(f"{kilo(x['read'] + x['wrote'])} new tokens and {kilo(x['cached'])} re-read in this build")
         parts.append(f"{NAME[a]} {', '.join(bits)}")
     s = "USAGE: " + "; ".join(parts) + ". "
     pc, px = u["claude"]["pct"], u["codex"]["pct"]
     if pc is not None and px is not None:             # the plans differ, so compare how full each one's limit is
         low, even = ("claude" if pc < px else "codex"), abs(pc - px) < 10
     else:                                             # no limit numbers yet: compare tokens
-        tc, tx = (u[a]["read"] + u[a]["wrote"] for a in ("claude", "codex"))
+        tc, tx = (cost(u[a]) for a in ("claude", "codex"))
         low, even = ("claude" if tc < tx else "codex"), max(tc, tx) < 1.25 * max(1, min(tc, tx))
     if even: return s + "That's about even: keep splitting the work half and half."
     return (s + f"{NAME[low]} has used less, so {NAME[low]} takes the next heavy tasks (writing code, running sims, "
@@ -180,15 +185,37 @@ PHASES = ("Work in phases and stop for Dean after each one. For an episode the p
           "video, the script, the facts table). Then stop: Dean reviews it and either says continue or asks for "
           "changes. When the whole build is done, start your reply with AGREED: and a summary for Dean.")
 
-def build_first(agent, task, rounds, context, other_reply=None):
+def build_first(agent, task, rounds, context, other_reply=None, handover=None):
     me, other = NAME[agent], NAME["codex" if agent == "claude" else "claude"]
     s = (f"Dean wants you ({me}) and {other} to BUILD this together, taking turns (up to {rounds} round"
          f"{'s' if rounds > 1 else ''} each per phase):\n\n{task}\n\n")
     if context: s += f"What you two agreed earlier in this chat:\n\n{context}\n\n"
+    if handover: s += handover + "\n\n"
     s += ("Claude makes the git commits on the branch (Codex's sandbox can't write git), after each working step. "
           "Follow CLAUDE.md: every fact checked by simulation or a solid source, gentle on the laptop.\n\n" + PHASES)
-    if other_reply is None: return s + "\n\nYou go first: list the phases, then the task list for phase 1, then start yours."
+    if other_reply is None:
+        return s + ("\n\nYou go first: catch up, then post the task list for the next phase (or for what's left of "
+                    "this one), then start yours." if handover else
+                    "\n\nYou go first: list the phases, then the task list for phase 1, then start yours.")
     return s + f"\n\n{other} went first and said:\n\n{other_reply}\n\nYour turn (round 1 of {rounds})."
+
+def handover_text(col):
+    """For a fresh session: what the build is up to, and where to read the rest (instead of a long chat history)."""
+    done = col.get("phases_done") or []
+    return ("THIS IS A FRESH SESSION: to save usage, the build starts a new chat after each phase instead of "
+            "re-reading the whole old one at every step. Nothing is lost: the work is in the build folder. Phases "
+            f"done and approved by Dean: {', '.join(done) if done else 'none yet'}. Catch up from the files, briefly "
+            "(don't re-read everything): `git log --oneline origin/main..HEAD`, `git status`, the facts table and "
+            "the episode script in docs/ and episodes/, and the other's reply below.")
+
+def fresh_sessions(p):
+    """Both agents start a new chat (Claude a new session, Codex a new thread); the page keeps the old messages."""
+    for a in ("claude", "codex"):
+        c = chat(p, a)
+        c["session_id"] = None
+        CC.add(c, "dean", text="(Fresh session from here, to save usage: the old chat isn't re-read any more.)",
+               files=[], how="desk")
+    CC.save()
 
 def after_review(col, name, decision):
     """Dean answered a PHASE READY: the notes each agent gets next, or None if he ended the build."""
@@ -225,11 +252,13 @@ async def collaborate(p, task, files, rounds, build=None, resume=None):
     t = 0; total = 0                     # turns in this phase, turns in all
     note = {}                            # agent -> Dean's review notes it hasn't seen yet
     solo_msg = "\0"                      # what the one carrying on alone was told (dropped if it never went)
+    handed = False                       # fresh sessions after a phase: the first two turns get a handover briefing
     if resume is not None:
         replies = {a: last_turn(chat(p, a))[0] for a in ("claude", "codex")}; total = 2
         if resume.get("rounds"): col["rounds"] = rounds = resume["rounds"]
         note = after_review(col, col.get("phase") or "the last phase", resume)
         if note is None: save(); return
+        if building: fresh_sessions(p); total = 0; handed = True
     try:
         while True:
             away = col.get("away")
@@ -245,7 +274,11 @@ async def collaborate(p, task, files, rounds, build=None, resume=None):
             agent = solo or ("claude" if t % 2 == 0 else "codex"); other = col_other(agent)
             r = t // 2 + 1
             col.update(round=r, turn=agent); save()
-            if total < 2:
+            if total < 2 and handed:
+                h = handover_text(col)
+                if total == 0: h += f"\n\n{NAME[other]}'s last reply before the fresh start:\n\n{replies[other]}"
+                prompt = build_first(agent, col["task"], rounds, "", replies[other] if total else None, handover=h)
+            elif total < 2:
                 prompt = (build_first(agent, task, rounds, build, replies[other]) if building
                           else first_prompt(agent, task, rounds, replies[other]))
             elif solo:
@@ -264,7 +297,7 @@ async def collaborate(p, task, files, rounds, build=None, resume=None):
                            "sum up where it stands for Dean.")
             c = chat(p, agent)
             while c["status"] == "running": await asyncio.sleep(1)      # Dean messaged it by hand: wait
-            await MOD[agent].turn(c, prompt, files if total < 2 else [])
+            await MOD[agent].turn(c, prompt, files if total < 2 and not handed else [])
             replies[agent], last, stopped = last_turn(c); lasts[agent] = last
             total += 1; t += 2 if solo else 1          # alone, each turn is a whole round
             hit = limit_hit(c)
@@ -299,6 +332,7 @@ async def collaborate(p, task, files, rounds, build=None, resume=None):
                 note = after_review(col, name, decision)
                 if note is None: return
                 t = 0; lasts = {"claude": "", "codex": ""}
+                fresh_sessions(p); total = 0; handed = True     # a new phase: new chats, short handover
                 continue
             if not building and t >= 2 * rounds:
                 col.update(state="done", note=f"Finished {rounds} round{'s' if rounds > 1 else ''}"); return

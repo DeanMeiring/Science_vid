@@ -77,10 +77,11 @@ def note_limit(agent, window, used=None, resets=None, status=None):
     w["at"] = time.time()
     LIMITS_FILE.write_text(json.dumps(LIMITS), encoding="utf-8")
 
-def add_tokens(chat, read, wrote):
-    """Count what a turn cost: tokens read (incl. cached context, re-read every step) and written."""
-    t = chat.setdefault("tokens", {"read": 0, "wrote": 0})
-    t["read"] += int(read or 0); t["wrote"] += int(wrote or 0)
+def add_tokens(chat, read, wrote, cached=0):
+    """Count what a turn cost: new tokens read, tokens written, and the cached conversation it re-read at every
+    step (that counts far less towards the usage limit, but grows with the length of the chat)."""
+    t = chat.setdefault("tokens", {"read": 0, "wrote": 0, "cached": 0})
+    t["read"] += int(read or 0); t["wrote"] += int(wrote or 0); t["cached"] = t.get("cached", 0) + int(cached or 0)
 
 def save():
     keep = [{k: v for k, v in c.items() if not k.startswith("_")} for c in CHATS.values()]   # "_turn" is live state
@@ -205,8 +206,8 @@ async def turn(chat, prompt, files):
                 elif isinstance(m, ResultMessage):
                     chat["session_id"] = m.session_id or chat["session_id"]
                     u = m.usage or {}
-                    add_tokens(chat, sum(u.get(k) or 0 for k in ("input_tokens", "cache_read_input_tokens",
-                                                                 "cache_creation_input_tokens")), u.get("output_tokens"))
+                    add_tokens(chat, (u.get("input_tokens") or 0) + (u.get("cache_creation_input_tokens") or 0),
+                               u.get("output_tokens"), u.get("cache_read_input_tokens"))
                     stopped = chat["events"][-1].get("text") == "Stopped by Dean."
                     if m.is_error and m.subtype != "success" and not stopped: add(chat, "error", text=m.result or m.subtype)
                     if not chat["_steered"] or stopped: save(); break

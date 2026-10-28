@@ -18,7 +18,7 @@ from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -344,6 +344,28 @@ async def pair_build(pid: str, m: Build):
     except Exception as ex: raise HTTPException(400, f"couldn't make the build folder: {ex}")
     PC.start_build(p, m.task.strip(), m.files, max(1, min(10, m.rounds)), m.branch)
     return {"ok": True, "path": p["build"]["path"]}
+
+class Review(BaseModel):
+    action: str                  # continue / stop
+    notes: str = ""
+
+@app.post("/api/pairs/{pid}/review")
+def pair_review(pid: str, m: Review):
+    if m.action not in ("continue", "stop"): raise HTTPException(400, "continue or stop")
+    if not PC.review(get_pair(pid), m.action, m.notes): raise HTTPException(409, "they aren't waiting for a review")
+    return {"ok": True}
+
+@app.get("/api/pairs/{pid}/outputs")
+async def pair_outputs(pid: str):
+    return await asyncio.to_thread(PC.outputs, get_pair(pid))
+
+@app.get("/api/file")
+def file(path: str):
+    """A file a build made, for the Outputs panel: only from build folders and renders/."""
+    f = Path(path).resolve()
+    if not any(f == r or r in f.parents for r in PC.allowed_roots()): raise HTTPException(403, "not a build output")
+    if not f.is_file(): raise HTTPException(404, "not found")
+    return FileResponse(f)
 
 @app.post("/api/pairs/{pid}/stop")
 async def pair_stop(pid: str):

@@ -112,10 +112,14 @@ clicked. Claude runs through the Claude Agent SDK (`desk/claude_chat.py`), Codex
 early when both start a reply with AGREED (`desk/pair_chat.py`). Every change still asks first.
 **Build together for N rounds** does the same but builds it: in its own copy of the repo
 (`../Science_vid_builds/<name>`, a git worktree on a new `claude/<name>` branch from `origin/main`), so the main
-folder never changes branch. `.venv`, `renders/` and the third-party assets are linked in, not copied. Claude
-writes and commits, Codex reviews and tests. Edits and test runs inside the build folder don't ask; Blender,
+folder never changes branch. `.venv`, `renders/` and the third-party assets are linked in, not copied. Claude and
+Codex split the work at the start of each phase (a task list with owners) and hand problems to each other (STUCK:).
+They build in phases (for an episode: facts and sim, script, voice, style sample, half-size draft, full render) and
+stop after each with PHASE READY: the page shows a "Phase ready for you" card and an **Outputs** panel that
+previews what the build made (images, voice, video, scripts). Press Continue, with notes for changes, to go on.
+Edits and test runs inside the build folder don't ask; Blender,
 installs, deletes, the network and anything outside the folder still do. Nobody pushes from the desk.
-To delete a build folder, remove the links first (`rmdir .venv renders assets	hirdparty` inside it), then
+To delete a build folder, remove the links first (`rmdir .venv renders assets\thirdparty` inside it), then
 `git worktree remove` it, so nothing can reach the shared folders.
 
 ## Run the prototypes

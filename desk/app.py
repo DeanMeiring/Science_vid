@@ -9,14 +9,19 @@ Usage: .venv/Scripts/python desk/app.py      # then open http://localhost:8770
   merging and posting are never done from here (the prompt says so, and Claude's git push is blocked).
 - Listens on 127.0.0.1 only: both agents can read the repo, so this page must never be on the internet.
 - History is kept in desk/history.jsonl (gitignored).
+- "Chat with Claude": live chats that remember the conversation, show every step, and ask permission with
+  buttons on the page (desk/claude_chat.py, the Claude Agent SDK; chats kept in desk/chats.json, gitignored).
 """
-import base64, json, os, re, shutil, subprocess, sys, threading, time, uuid
+import asyncio, base64, json, os, re, shutil, subprocess, sys, threading, time, uuid
 from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import claude_chat as CC
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -196,6 +201,62 @@ def state():
     talks = {t: dict(v) for t, v in TALKS.items()}
     return dict(jobs=jobs, busy=busy, talks=talks, installed={k: bool(v) for k, v in AGENTS.items()},
                 uploads=sorted(p.name for p in UPLOADS.iterdir() if p.is_file()))
+
+# ---------------- live chats with Claude ----------------
+TASKS = set()
+
+class Send(BaseModel):
+    prompt: str
+    files: list[str] = []
+
+class Decision(BaseModel):
+    decision: str            # once / always / deny
+
+@app.get("/api/chats")
+def chats():
+    out = []
+    for c in sorted(CC.CHATS.values(), key=lambda c: -c["created"]):
+        waiting = sum(1 for e in c["events"] if e["type"] == "perm" and e["state"] == "waiting")
+        out.append(dict(id=c["id"], title=c["title"], status=c["status"], created=c["created"], waiting=waiting,
+                        n=len(c["events"])))
+    return out
+
+@app.post("/api/chats")
+def chat_new():
+    return CC.new_chat()
+
+@app.get("/api/chats/{cid}")
+def chat_get(cid: str):
+    if cid not in CC.CHATS: raise HTTPException(404, "no such chat")
+    return CC.CHATS[cid]
+
+@app.post("/api/chats/{cid}/send")
+async def chat_send(cid: str, m: Send):
+    c = CC.CHATS.get(cid)
+    if not c: raise HTTPException(404, "no such chat")
+    if c["status"] == "running": raise HTTPException(409, "Claude is still working in this chat: wait or press Stop")
+    if not m.prompt.strip(): raise HTTPException(400, "type a message first")
+    c["status"] = "running"           # at once, so a second click is refused
+    task = asyncio.create_task(CC.turn(c, m.prompt.strip(), m.files)); TASKS.add(task); task.add_done_callback(TASKS.discard)
+    return {"ok": True}
+
+@app.post("/api/chats/{cid}/stop")
+async def chat_stop(cid: str):
+    await CC.stop(cid)
+    return {"ok": True}
+
+@app.post("/api/chats/{cid}/delete")
+def chat_delete(cid: str):
+    c = CC.CHATS.get(cid)
+    if c and c["status"] == "running": raise HTTPException(409, "stop it first")
+    CC.CHATS.pop(cid, None); CC.save()
+    return {"ok": True}
+
+@app.post("/api/permission/{pid}")
+async def permission(pid: str, d: Decision):
+    if d.decision not in ("once", "always", "deny"): raise HTTPException(400, "once, always or deny")
+    if not CC.answer(pid, d.decision): raise HTTPException(404, "that question has already been answered")
+    return {"ok": True}
 
 @app.post("/api/upload")
 def upload(u: Upload):

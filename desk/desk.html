@@ -54,6 +54,31 @@ label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; al
 .note { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } }
+.tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.tabs button { border-radius: 99px; }
+.tabs button.on { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.chatwrap { display: grid; grid-template-columns: 230px 1fr; gap: 14px; align-items: start; }
+@media (max-width: 760px) { .chatwrap { grid-template-columns: 1fr; } }
+.chatlist { padding: 10px; }
+.chatlist .item { display: block; width: 100%; text-align: left; margin-top: 6px; padding: 8px 10px; font-size: 13px;
+                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chatlist .item.on { border-color: var(--claude); background: var(--claude-bg); }
+.badge { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 99px; background: #e6a700; color: #000; margin-right: 4px; }
+.thread { max-height: 62vh; overflow-y: auto; padding-right: 4px; }
+.ev { margin-top: 10px; }
+.ev.user { text-align: right; }
+.ev.user .bubble { display: inline-block; text-align: left; background: var(--bg); border: 1px solid var(--line); }
+.bubble { border-radius: 12px; padding: 8px 12px; white-space: pre-wrap; word-wrap: break-word; max-width: 100%; }
+.ev.text .bubble { background: var(--claude-bg); }
+.bubble code { background: rgba(127,127,127,.15); padding: 0 4px; border-radius: 4px; font-size: 13px; }
+.bubble pre { background: rgba(127,127,127,.12); padding: 8px; border-radius: 8px; overflow-x: auto; white-space: pre; margin: 6px 0; }
+.tool { font-size: 13px; color: var(--muted); }
+.tool summary { cursor: pointer; }
+.tool pre { white-space: pre-wrap; max-height: 260px; overflow: auto; background: var(--bg); padding: 8px; border-radius: 8px; margin: 4px 0 0; }
+.perm { border: 2px solid #e6a700; border-radius: 12px; padding: 10px 12px; background: color-mix(in srgb, #e6a700 10%, var(--card)); }
+.perm .what { font-weight: 600; word-break: break-word; }
+.perm details pre { white-space: pre-wrap; font-size: 12px; max-height: 200px; overflow: auto; }
+.working { color: var(--muted); font-size: 13px; margin-top: 10px; animation: pulse 1.4s infinite; }
 #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--accent); color: var(--bg);
          padding: 8px 14px; border-radius: 10px; display: none; max-width: 90vw; }
 </style>
@@ -66,6 +91,37 @@ label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; al
     <span class="pill"><span class="dot" id="d-codex"></span>Codex <span class="meta" id="s-codex"></span></span>
   </header>
 
+  <div class="tabs">
+    <button data-tab="chat" class="on">Chat with Claude</button>
+    <button data-tab="compare">Ask &amp; compare (Claude + Codex)</button>
+  </div>
+
+  <div id="tab-chat">
+    <div class="chatwrap">
+      <section class="card chatlist">
+        <button class="claude" id="newchat" style="width:100%">+ New chat</button>
+        <div id="chats"></div>
+      </section>
+      <section class="card">
+        <div class="row" style="margin-top:0">
+          <strong id="chattitle">Pick a chat or start a new one</strong><span class="spacer"></span>
+          <button class="small" id="delchat" hidden>Delete chat</button>
+        </div>
+        <div class="thread" id="thread"></div>
+        <textarea id="cprompt" placeholder="Message Claude... (Ctrl+Enter to send)" style="margin-top:12px"></textarea>
+        <div class="files" id="cattached"></div>
+        <div class="row">
+          <button id="cattach">Attach files</button><input type="file" id="cfile" multiple hidden>
+          <span class="note" style="margin:0">Claude asks before changing files or running new commands. It never pushes, merges or posts.</span>
+          <span class="spacer"></span>
+          <button id="cstop" hidden>Stop</button>
+          <button class="claude" id="csend">Send</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="tab-compare" hidden>
   <section class="card">
     <h2>Ask</h2>
     <textarea id="prompt" placeholder="Ask Claude, Codex or both... (Ctrl+Enter asks both)"></textarea>
@@ -95,6 +151,7 @@ label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; al
   </section>
 
   <div id="feed"></div>
+  </div>
 </main>
 <div id="toast"></div>
 <script>
@@ -113,21 +170,22 @@ async function api(path, body) {
 
 // ---- files
 $("#attach").onclick = () => $("#file").click();
-$("#file").onchange = async (e) => {
-  for (const f of e.target.files) {
+async function uploadAll(files, list) {
+  for (const f of files) {
     const data = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(f); });
-    try { const r = await api("/api/upload", { name: f.name, data }); attached.push(r.name); } catch (err) { toast(err.message); }
+    try { const r = await api("/api/upload", { name: f.name, data }); list.push(r.name); } catch (err) { toast(err.message); }
   }
-  e.target.value = ""; drawAttached();
-};
-function drawAttached() {
-  const box = $("#attached"); box.replaceChildren();
-  attached.forEach((n, i) => {
+}
+function drawChips(box, list) {
+  box.replaceChildren();
+  list.forEach((n, i) => {
     const c = document.createElement("span"); c.className = "chip"; c.textContent = n;
     const x = document.createElement("button"); x.textContent = "×"; x.title = "Don't send this file";
-    x.onclick = () => { attached.splice(i, 1); drawAttached(); }; c.append(x); box.append(c);
+    x.onclick = () => { list.splice(i, 1); drawChips(box, list); }; c.append(x); box.append(c);
   });
 }
+$("#file").onchange = async (e) => { await uploadAll(e.target.files, attached); e.target.value = ""; drawAttached(); };
+function drawAttached() { drawChips($("#attached"), attached); }
 
 // ---- ask / talk
 async function ask(which) {
@@ -220,6 +278,107 @@ async function refresh() {
   } catch (e) { /* server restarting */ }
 }
 refresh(); setInterval(refresh, 1500);
+
+// ================= Chat with Claude =================
+let chats = [], openId = null, openChat = null, cattached = [], stick = true;
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function fmt(s) {          // a little markdown: code blocks, inline code, bold (escaped first, so it's safe)
+  return esc(s).replace(/```[a-z]*\n?([\s\S]*?)```/g, "<pre>$1</pre>").replace(/`([^`\n]+)`/g, "<code>$1</code>")
+               .replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>");
+}
+document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => {
+  document.querySelectorAll("[data-tab]").forEach((x) => x.classList.toggle("on", x === b));
+  $("#tab-chat").hidden = b.dataset.tab !== "chat"; $("#tab-compare").hidden = b.dataset.tab !== "compare";
+});
+$("#cattach").onclick = () => $("#cfile").click();
+$("#cfile").onchange = async (e) => { await uploadAll(e.target.files, cattached); e.target.value = ""; drawChips($("#cattached"), cattached); };
+$("#newchat").onclick = async () => { const c = await api("/api/chats", {}); openId = c.id; openChat = null; await pollChats(true); $("#cprompt").focus(); };
+$("#delchat").onclick = async () => {
+  if (!openId || !confirm("Delete this chat from the desk?")) return;
+  try { await api(`/api/chats/${openId}/delete`, {}); openId = null; openChat = null; await pollChats(true); } catch (e) { toast(e.message); }
+};
+async function send() {
+  const prompt = $("#cprompt").value.trim();
+  if (!prompt) return toast("Type a message first");
+  try {
+    if (!openId) { const c = await api("/api/chats", {}); openId = c.id; }
+    await api(`/api/chats/${openId}/send`, { prompt, files: cattached });
+    $("#cprompt").value = ""; cattached = []; drawChips($("#cattached"), cattached); stick = true; await pollChats(true);
+  } catch (e) { toast(e.message); }
+}
+$("#csend").onclick = send;
+$("#cprompt").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) send(); });
+$("#cstop").onclick = () => api(`/api/chats/${openId}/stop`, {}).then(() => pollChats(true)).catch((e) => toast(e.message));
+
+function drawChats() {
+  const box = $("#chats"); box.replaceChildren();
+  for (const c of chats) {
+    const b = el("button", "item" + (c.id === openId ? " on" : ""));
+    if (c.waiting) b.append(el("span", "badge", "needs you"));
+    b.append((c.status === "running" ? "⏳ " : "") + c.title);
+    b.onclick = async () => { openId = c.id; openChat = null; stick = true; await pollChats(true); };
+    box.append(b);
+  }
+  const waiting = chats.reduce((n, c) => n + c.waiting, 0);
+  document.title = waiting ? `(${waiting}) Claude needs you · Agent Desk` : "Agent Desk";
+}
+const PERM_DONE = { once: "✓ Allowed once", always: "✓ Allowed for the rest of this chat", deny: "✗ Denied", expired: "✗ Not answered in time" };
+function drawThread() {
+  const th = $("#thread");
+  const near = th.scrollHeight - th.scrollTop - th.clientHeight < 80;
+  const open = new Set([...th.querySelectorAll("details[open]")].map((d) => d.dataset.k));   // keep expanded steps open
+  th.replaceChildren();
+  $("#chattitle").textContent = openChat ? openChat.title : "Pick a chat or start a new one";
+  $("#delchat").hidden = !openChat;
+  const running = !!openChat && openChat.status === "running";
+  $("#cstop").hidden = !running; $("#csend").disabled = running;
+  if (!openChat) return;
+  openChat.events.forEach((e, i) => {
+    const d = el("div", "ev " + e.type);
+    if (e.type === "user") d.append(el("div", "bubble", e.text + (e.files?.length ? `\n📎 ${e.files.join(", ")}` : "")));
+    else if (e.type === "text") { const b = el("div", "bubble"); b.innerHTML = fmt(e.text); d.append(b); }
+    else if (e.type === "tool") {
+      const det = el("details", "tool"); det.dataset.k = "t" + i; det.open = open.has("t" + i);
+      det.append(el("summary", null, `${e.ok === false ? "✗" : e.out === null ? "…" : "✓"} ${e.what}`));
+      if (e.out) det.append(el("pre", null, e.out));
+      d.append(det);
+    } else if (e.type === "perm") {
+      const p = el("div", "perm");
+      p.append(el("div", null, "Claude wants to:"), el("div", "what", e.what));
+      if (e.why && e.why !== e.what) p.append(el("div", "note", e.why));
+      const det = el("details"); det.dataset.k = "p" + i; det.open = open.has("p" + i);
+      det.append(el("summary", "note", "details"), el("pre", null, e.detail)); p.append(det);
+      if (e.state === "waiting") {
+        const row = el("div", "row");
+        for (const [label, dec, cls] of [["Allow once", "once", "claude"], ["Allow in this chat", "always", ""], ["Deny", "deny", ""]]) {
+          const b = el("button", cls, label);
+          b.onclick = () => api(`/api/permission/${e.id}`, { decision: dec }).then(() => pollChats(true)).catch((x) => toast(x.message));
+          row.append(b);
+        }
+        p.append(row);
+      } else p.append(el("div", "note", PERM_DONE[e.state] || e.state));
+      d.append(p);
+    } else if (e.type === "error") d.append(el("div", "note err", e.text));
+    else if (e.type === "done") d.append(el("div", "note", `Finished in ${e.seconds}s`));
+    th.append(d);
+  });
+  if (running && !openChat.events.some((e) => e.type === "perm" && e.state === "waiting")) th.append(el("div", "working", "Claude is working…"));
+  if (stick || near) th.scrollTop = th.scrollHeight;
+  stick = false;
+}
+let lastChats = "", lastChat = "";
+async function pollChats(force) {
+  try {
+    const cs = await api("/api/chats"); const js = JSON.stringify(cs);
+    if (force || js !== lastChats) { chats = cs; lastChats = js; drawChats(); }
+    if (openId && chats.some((c) => c.id === openId)) {
+      const c = await api(`/api/chats/${openId}`); const k = JSON.stringify(c);
+      if (force || k !== lastChat) { openChat = c; lastChat = k; drawThread(); }   // only redraw on change (keeps selection)
+    } else if (openChat || force) { openId = null; openChat = null; lastChat = ""; drawThread(); }
+  } catch (e) { /* server restarting */ }
+}
+pollChats(true); setInterval(() => pollChats(false), 1200);
 </script>
 </body>
 </html>

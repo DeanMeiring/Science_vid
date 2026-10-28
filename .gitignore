@@ -26,3 +26,4 @@ assets/thirdparty/
 desk/uploads/
 desk/history.jsonl
 desk/.codex_*.txt
+desk/chats.json

@@ -19,7 +19,29 @@
   Railway). It's a library of methods to reuse here. Copy what's needed;
   don't import across repos.
 
-## Where we left off (27 Oct 2026, ~15:20)
+## Where we left off (28 Oct 2026, ~15:00)
+- **Done for the day** (Dean: "finish up for today"; he couldn't wait an hour for the full render).
+- **Experiment 13: "Will all six get home?"** (Joe + 5 helpers) is being built by Claude + Codex in the agent desk:
+  build folder `../Science_vid_builds/experiment14`, branch `claude/experiment14` (not pushed), latest commit 5ce907f.
+  Phases done: facts and sim, script, voice-over (george, `renders/ep13_six/narration_flow.wav`), style sample,
+  half-size draft (redone twice for Dean's notes; `renders/ep13_six/ep13_six_draft.mp4`), full-render preparation.
+  **Waiting on Dean's review card:** pressing Continue starts the full render (~1,100 frames, ~40-50 min). Don't
+  press "End the build here" (that ends the build and hides Carry on). The card survives desk restarts.
+- **PR #14** (side turns may read render scripts, only starting a render is blocked) waits for Dean. If merged,
+  restart the desk on main before he presses Continue.
+- **Desk features merged today (PRs #10-#13):** pause on usage limits and Carry on the build; open the posting studio
+  (lists unmerged build episodes); even load split (each side shows % of its limit and new vs re-read tokens; every
+  build turn starts with a USAGE line; whoever used less takes the next heavy task); when one hits its limit the other
+  carries on alone; Claude model picker (Sonnet stretches the limit); fresh sessions per phase with a handover;
+  side turns while the other runs a long command (>90 s; no commits, no second render); render time left on the page.
+- **Usage lesson (28 Oct):** every step re-sends the whole chat. Claude's long build session (~195k tokens) re-read
+  ~1.9M tokens in one turn; fresh sessions per phase fixed it. Most of that is cached (counts much less).
+- Lesson: a PR stacked on another merges into that branch, not main: if the lower one is merged first, point the
+  upper PR at main (happened with #12; #13 was retargeted and brought it in).
+- Next: after the full render, Dean watches it and posts from the studio ("Open the posting studio" in the desk).
+  Then push `claude/experiment14` (maybe rename to episode-13) when Dean asks.
+
+## Earlier (27 Oct 2026, ~15:20)
 - **Done for the day after Experiment 12** was posted (Dean: "we posted finish up"). **Posted 27 Oct 15:06**, public on
   both: YouTube https://youtube.com/shorts/ygktb9u_cqY and Instagram https://www.instagram.com/reel/De_7TgIEmTI/
   Branch `claude/episode-12-birthdays` pushed (no PR yet). Open: TikTok by hand.

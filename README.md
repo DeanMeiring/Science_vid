@@ -102,6 +102,12 @@ when they agree. It drives the `claude` and `codex` command-line tools you're al
 cost). Read-only unless "Allow file edits" is ticked; it never pushes, merges or posts. It only listens on
 127.0.0.1: never put it on the internet. Uploads and history stay in `desk/` (gitignored).
 
+The **Chats** tab works like Claude Code itself: live chats with Claude or Codex that remember the
+conversation and show every step. Before changing a file or running a command that isn't a plain read, the
+page asks with Allow once / Allow in this chat / Deny. Push, merge and post commands are refused whatever is
+clicked. Claude runs through the Claude Agent SDK (`desk/claude_chat.py`), Codex through `codex app-server`
+(`desk/codex_chat.py`, in its workspace-write sandbox: writes only inside the repo, no network).
+
 ## Run the prototypes
 
 ```

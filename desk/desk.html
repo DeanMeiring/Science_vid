@@ -63,6 +63,9 @@ label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; al
 .chatlist .item { display: block; width: 100%; text-align: left; margin-top: 6px; padding: 8px 10px; font-size: 13px;
                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chatlist .item.on { border-color: var(--claude); background: var(--claude-bg); }
+.chatlist .item.codex.on { border-color: var(--codex); background: var(--codex-bg); }
+.chatlist .tag { font-size: 11px; font-weight: 600; margin-right: 4px; }
+.ev.text.codex .bubble { background: var(--codex-bg); }
 .badge { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 99px; background: #e6a700; color: #000; margin-right: 4px; }
 .thread { max-height: 62vh; overflow-y: auto; padding-right: 4px; }
 .ev { margin-top: 10px; }
@@ -92,14 +95,15 @@ label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; al
   </header>
 
   <div class="tabs">
-    <button data-tab="chat" class="on">Chat with Claude</button>
+    <button data-tab="chat" class="on">Chats</button>
     <button data-tab="compare">Ask &amp; compare (Claude + Codex)</button>
   </div>
 
   <div id="tab-chat">
     <div class="chatwrap">
       <section class="card chatlist">
-        <button class="claude" id="newchat" style="width:100%">+ New chat</button>
+        <button class="claude" data-new="claude" style="width:100%">+ Chat with Claude</button>
+        <button class="codex" data-new="codex" style="width:100%;margin-top:6px">+ Chat with Codex</button>
         <div id="chats"></div>
       </section>
       <section class="card">
@@ -108,11 +112,11 @@ label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; al
           <button class="small" id="delchat" hidden>Delete chat</button>
         </div>
         <div class="thread" id="thread"></div>
-        <textarea id="cprompt" placeholder="Message Claude... (Ctrl+Enter to send)" style="margin-top:12px"></textarea>
+        <textarea id="cprompt" placeholder="Message... (Ctrl+Enter to send)" style="margin-top:12px"></textarea>
         <div class="files" id="cattached"></div>
         <div class="row">
           <button id="cattach">Attach files</button><input type="file" id="cfile" multiple hidden>
-          <span class="note" style="margin:0">Claude asks before changing files or running new commands. It never pushes, merges or posts.</span>
+          <span class="note" style="margin:0">It asks before changing files or running new commands. It never pushes, merges or posts.</span>
           <span class="spacer"></span>
           <button id="cstop" hidden>Stop</button>
           <button class="claude" id="csend">Send</button>
@@ -293,7 +297,11 @@ document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => {
 });
 $("#cattach").onclick = () => $("#cfile").click();
 $("#cfile").onchange = async (e) => { await uploadAll(e.target.files, cattached); e.target.value = ""; drawChips($("#cattached"), cattached); };
-$("#newchat").onclick = async () => { const c = await api("/api/chats", {}); openId = c.id; openChat = null; await pollChats(true); $("#cprompt").focus(); };
+document.querySelectorAll("[data-new]").forEach((b) => b.onclick = async () => {
+  try { const c = await api("/api/chats", { agent: b.dataset.new }); openId = c.id; openChat = null; await pollChats(true); $("#cprompt").focus(); }
+  catch (e) { toast(e.message); }
+});
+const who = () => (openChat && openChat.agent === "codex" ? "Codex" : "Claude");
 $("#delchat").onclick = async () => {
   if (!openId || !confirm("Delete this chat from the desk?")) return;
   try { await api(`/api/chats/${openId}/delete`, {}); openId = null; openChat = null; await pollChats(true); } catch (e) { toast(e.message); }
@@ -302,7 +310,7 @@ async function send() {
   const prompt = $("#cprompt").value.trim();
   if (!prompt) return toast("Type a message first");
   try {
-    if (!openId) { const c = await api("/api/chats", {}); openId = c.id; }
+    if (!openId) { const c = await api("/api/chats", { agent: "claude" }); openId = c.id; }
     await api(`/api/chats/${openId}/send`, { prompt, files: cattached });
     $("#cprompt").value = ""; cattached = []; drawChips($("#cattached"), cattached); stick = true; await pollChats(true);
   } catch (e) { toast(e.message); }
@@ -314,14 +322,15 @@ $("#cstop").onclick = () => api(`/api/chats/${openId}/stop`, {}).then(() => poll
 function drawChats() {
   const box = $("#chats"); box.replaceChildren();
   for (const c of chats) {
-    const b = el("button", "item" + (c.id === openId ? " on" : ""));
+    const b = el("button", `item ${c.agent}` + (c.id === openId ? " on" : ""));
     if (c.waiting) b.append(el("span", "badge", "needs you"));
+    const tg = el("span", "tag", c.agent === "codex" ? "Codex" : "Claude"); tg.style.color = `var(--${c.agent})`; b.append(tg);
     b.append((c.status === "running" ? "⏳ " : "") + c.title);
     b.onclick = async () => { openId = c.id; openChat = null; stick = true; await pollChats(true); };
     box.append(b);
   }
   const waiting = chats.reduce((n, c) => n + c.waiting, 0);
-  document.title = waiting ? `(${waiting}) Claude needs you · Agent Desk` : "Agent Desk";
+  document.title = waiting ? `(${waiting}) needs you · Agent Desk` : "Agent Desk";
 }
 const PERM_DONE = { once: "✓ Allowed once", always: "✓ Allowed for the rest of this chat", deny: "✗ Denied", expired: "✗ Not answered in time" };
 function drawThread() {
@@ -335,7 +344,7 @@ function drawThread() {
   $("#cstop").hidden = !running; $("#csend").disabled = running;
   if (!openChat) return;
   openChat.events.forEach((e, i) => {
-    const d = el("div", "ev " + e.type);
+    const d = el("div", `ev ${e.type} ${openChat.agent || "claude"}`);
     if (e.type === "user") d.append(el("div", "bubble", e.text + (e.files?.length ? `\n📎 ${e.files.join(", ")}` : "")));
     else if (e.type === "text") { const b = el("div", "bubble"); b.innerHTML = fmt(e.text); d.append(b); }
     else if (e.type === "tool") {
@@ -345,7 +354,7 @@ function drawThread() {
       d.append(det);
     } else if (e.type === "perm") {
       const p = el("div", "perm");
-      p.append(el("div", null, "Claude wants to:"), el("div", "what", e.what));
+      p.append(el("div", null, `${who()} wants to:`), el("div", "what", e.what));
       if (e.why && e.why !== e.what) p.append(el("div", "note", e.why));
       const det = el("details"); det.dataset.k = "p" + i; det.open = open.has("p" + i);
       det.append(el("summary", "note", "details"), el("pre", null, e.detail)); p.append(det);
@@ -363,7 +372,7 @@ function drawThread() {
     else if (e.type === "done") d.append(el("div", "note", `Finished in ${e.seconds}s`));
     th.append(d);
   });
-  if (running && !openChat.events.some((e) => e.type === "perm" && e.state === "waiting")) th.append(el("div", "working", "Claude is working…"));
+  if (running && !openChat.events.some((e) => e.type === "perm" && e.state === "waiting")) th.append(el("div", "working", `${who()} is working…`));
   if (stick || near) th.scrollTop = th.scrollHeight;
   stick = false;
 }

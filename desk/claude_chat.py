@@ -43,10 +43,11 @@ def load():
 load()
 
 def save():
-    STORE.write_text(json.dumps(list(CHATS.values())), encoding="utf-8")
+    keep = [{k: v for k, v in c.items() if not k.startswith("_")} for c in CHATS.values()]   # "_turn" is live state
+    STORE.write_text(json.dumps(keep), encoding="utf-8")
 
-def new_chat():
-    c = dict(id=uuid.uuid4().hex[:10], title="New chat", session_id=None, created=time.time(), status="idle",
+def new_chat(agent="claude"):
+    c = dict(id=uuid.uuid4().hex[:10], agent=agent, title="New chat", session_id=None, created=time.time(), status="idle",
              events=[], always=[])
     CHATS[c["id"]] = c; save()
     return c

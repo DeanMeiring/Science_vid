@@ -9,8 +9,9 @@ Usage: .venv/Scripts/python desk/app.py      # then open http://localhost:8770
   merging and posting are never done from here (the prompt says so, and Claude's git push is blocked).
 - Listens on 127.0.0.1 only: both agents can read the repo, so this page must never be on the internet.
 - History is kept in desk/history.jsonl (gitignored).
-- "Chat with Claude": live chats that remember the conversation, show every step, and ask permission with
-  buttons on the page (desk/claude_chat.py, the Claude Agent SDK; chats kept in desk/chats.json, gitignored).
+- "Chats": live chats with Claude or Codex that remember the conversation, show every step, and ask
+  permission with buttons on the page (desk/claude_chat.py through the Claude Agent SDK, desk/codex_chat.py
+  through `codex app-server`; chats kept in desk/chats.json, gitignored).
 """
 import asyncio, base64, json, os, re, shutil, subprocess, sys, threading, time, uuid
 from pathlib import Path
@@ -22,6 +23,7 @@ from pydantic import BaseModel
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import claude_chat as CC
+import codex_chat as XC
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -205,6 +207,9 @@ def state():
 # ---------------- live chats with Claude ----------------
 TASKS = set()
 
+class NewChat(BaseModel):
+    agent: str = "claude"
+
 class Send(BaseModel):
     prompt: str
     files: list[str] = []
@@ -217,32 +222,36 @@ def chats():
     out = []
     for c in sorted(CC.CHATS.values(), key=lambda c: -c["created"]):
         waiting = sum(1 for e in c["events"] if e["type"] == "perm" and e["state"] == "waiting")
-        out.append(dict(id=c["id"], title=c["title"], status=c["status"], created=c["created"], waiting=waiting,
+        out.append(dict(id=c["id"], agent=c.get("agent", "claude"), title=c["title"], status=c["status"], created=c["created"], waiting=waiting,
                         n=len(c["events"])))
     return out
 
 @app.post("/api/chats")
-def chat_new():
-    return CC.new_chat()
+def chat_new(n: NewChat):
+    if n.agent not in ("claude", "codex"): raise HTTPException(400, "claude or codex")
+    if not AGENTS[n.agent]: raise HTTPException(400, f"{NAME[n.agent]} isn't installed")
+    return CC.new_chat(n.agent)
 
 @app.get("/api/chats/{cid}")
 def chat_get(cid: str):
     if cid not in CC.CHATS: raise HTTPException(404, "no such chat")
-    return CC.CHATS[cid]
+    return {k: v for k, v in CC.CHATS[cid].items() if not k.startswith("_")}
 
 @app.post("/api/chats/{cid}/send")
 async def chat_send(cid: str, m: Send):
     c = CC.CHATS.get(cid)
     if not c: raise HTTPException(404, "no such chat")
-    if c["status"] == "running": raise HTTPException(409, "Claude is still working in this chat: wait or press Stop")
+    if c["status"] == "running": raise HTTPException(409, "still working in this chat: wait or press Stop")
     if not m.prompt.strip(): raise HTTPException(400, "type a message first")
     c["status"] = "running"           # at once, so a second click is refused
-    task = asyncio.create_task(CC.turn(c, m.prompt.strip(), m.files)); TASKS.add(task); task.add_done_callback(TASKS.discard)
+    mod = XC if c.get("agent") == "codex" else CC
+    task = asyncio.create_task(mod.turn(c, m.prompt.strip(), m.files)); TASKS.add(task); task.add_done_callback(TASKS.discard)
     return {"ok": True}
 
 @app.post("/api/chats/{cid}/stop")
 async def chat_stop(cid: str):
-    await CC.stop(cid)
+    c = CC.CHATS.get(cid)
+    await (XC if c and c.get("agent") == "codex" else CC).stop(cid)
     return {"ok": True}
 
 @app.post("/api/chats/{cid}/delete")

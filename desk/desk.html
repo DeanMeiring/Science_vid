@@ -410,6 +410,7 @@ function setView() {          // build the thread boxes for what's open: one thr
                                      : "Message... (Ctrl+Enter to send)";
 }
 
+const LONG_MIN = 3;           // minutes before a running step gets the "may be stuck" warning
 const PERM_DONE = { once: "✓ Allowed once", always: "✓ Allowed for the rest of this chat", deny: "✗ Denied", expired: "✗ Not answered in time" };
 function drawThread(th, chat) {
   const near = th.scrollHeight - th.scrollTop - th.clientHeight < 80;
@@ -426,6 +427,12 @@ function drawThread(th, chat) {
       det.append(el("summary", null, `${e.ok === false ? "✗" : e.out === null ? "…" : "✓"} ${e.what}`));
       if (e.out) det.append(el("pre", null, e.out));
       d.append(det);
+      const mins = Math.floor((Date.now() / 1000 - e.t) / 60);
+      if (e.out === null && chat.status === "running" && mins >= LONG_MIN) {      // a step that seems stuck
+        const w = el("div", "perm row"); w.style.marginTop = "6px";
+        w.append(el("span", null, `⚠ This step has been running for ${mins} min. It may be stuck.`), el("span", "spacer"));
+        const b = el("button", "small", "Stop " + name); b.onclick = () => stopChat(chat.id); w.append(b); d.append(w);
+      }
     } else if (e.type === "perm") {
       const p = el("div", "perm");
       p.append(el("div", null, `${name} wants to:`), el("div", "what", e.what));
@@ -480,6 +487,11 @@ function drawOpen() {
   stick = false;
 }
 
+function longSteps(d) {
+  const cs = d.events ? [d] : [d.claude, d.codex];
+  return cs.map((c) => (c?.events || []).filter((e) => e.type === "tool" && e.out === null)
+                       .map((e) => Math.floor((Date.now() / 1000 - e.t) / 60)).join(",")).join("|");
+}
 async function pollChats(force) {
   try {
     const [cs, ps] = await Promise.all([api("/api/chats"), api("/api/pairs")]);
@@ -487,11 +499,14 @@ async function pollChats(force) {
     if (force || js !== lastList) { chats = cs; pairs = ps; lastList = js; drawChats(); }
     if (open && !(open.kind === "pair" ? ps : cs).some((x) => x.id === open.id)) { open = null; setView(); }
     if (open) {
-      const d = await api(open.kind === "pair" ? `/api/pairs/${open.id}` : `/api/chats/${open.id}`); const k = JSON.stringify(d);
+      const d = await api(open.kind === "pair" ? `/api/pairs/${open.id}` : `/api/chats/${open.id}`);
+      const k = JSON.stringify(d) + longSteps(d);        // also redraw when a step's minutes tick over
       if (force || k !== lastData) { data = d; lastData = k; drawOpen(); }   // only redraw on change (keeps selection)
     } else if (force || data) { data = null; lastData = ""; drawOpen(); }
   } catch (e) { /* server restarting */ }
 }
+{ const q = new URLSearchParams(location.search).get("open");      // ?open=<chat id> or ?open=pair:<id>
+  if (q) open = q.startsWith("pair:") ? { kind: "pair", id: q.slice(5) } : { kind: "chat", id: q }; }
 setView(); pollChats(true); setInterval(() => pollChats(false), 1200);
 </script>
 </body>

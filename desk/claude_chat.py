@@ -20,7 +20,9 @@ STORE = HERE / "chats.json"
 WAIT = 30 * 60                       # seconds a permission question waits before it counts as "deny"
 GUARD = ("You are running inside Dean's local 'agent desk' web page, in the Science_vid repo. Follow CLAUDE.md. "
          "Never push, merge, post or publish anything: if that's needed, tell Dean to do it himself. Dean answers "
-         "permission requests with buttons on the page.")
+         "permission requests with buttons on the page. Run every command in the foreground and keep it under a few "
+         "minutes (use a timeout); no background jobs, no loops that wait for another job's output. If something "
+         "would take longer, say so and ask Dean first. Be gentle on the laptop.")
 BLOCK = re.compile(r"\bgit\s+push\b|\bgit\s+merge\b|\bgh\s+pr\s+merge\b|\bgh\s+api\b.*\bmerge|"
                    r"(localhost|127\.0\.0\.1):8765/api/(episode|post)|publish_reel|upload_video|publish[/\\.](youtube|instagram)",
                    re.I)
@@ -74,10 +76,14 @@ def always_key(name, inp):
 
 async def guard_hook(inp, tool_use_id, ctx):
     """Runs before every tool call, allowed or not: the hard no-push / no-merge / no-post rules."""
-    name = inp.get("tool_name"); cmd = str((inp.get("tool_input") or {}).get("command", ""))
+    name = inp.get("tool_name"); ti = inp.get("tool_input") or {}; cmd = str(ti.get("command", ""))
+    deny = lambda why: {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                               "permissionDecisionReason": why}}
     if name in SHELL and BLOCK.search(cmd):
-        return {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
-                                       "permissionDecisionReason": "The agent desk never pushes, merges or posts. Ask Dean to do it."}}
+        return deny("The agent desk never pushes, merges or posts. Ask Dean to do it.")
+    if (name in SHELL and ti.get("run_in_background")) or name == "Monitor":
+        return deny("The agent desk doesn't run background jobs (nothing reports back when they end). Run it in "
+                    "the foreground with a timeout of a few minutes, or ask Dean if it needs longer.")
     return {}
 
 def make_permission(chat):

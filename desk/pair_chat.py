@@ -225,7 +225,7 @@ def build_extra(path, branch):
     return (f"\n\nYOU ARE BUILDING in a separate copy of the repo: {path}, on branch {branch} (cut from origin/main). "
             "Work only in that folder. renders/, .venv and the third-party assets are shared with Dean's main folder "
             "(linked in): run Python as .venv\\Scripts\\python.exe from the build folder, not by the main folder's path. "
-            "Its CLAUDE.md is main's (up to Experiment 11; Experiment 12 is on an unmerged branch). "
+            "Its files and CLAUDE.md are main's: work that isn't merged yet lives on other branches (read it with git show). "
             "Edits and test runs in this folder don't ask Dean; Blender, installs, deletes and the network still do. "
             "Claude makes the git commits on this branch; Codex never runs git commands that change anything. "
             "Nobody pushes: Dean does that.")

@@ -11,6 +11,7 @@ _a.wav
 voices/
 # secrets
 .env
+.tokens/
 *_token*.json
 # python
 __pycache__/
@@ -18,3 +19,10 @@ __pycache__/
 venv/
 # blender
 *.blend1
+
+# third-party 3D assets (Kenney CC0, Quaternius: licence forbids redistributing): never committed
+assets/thirdparty/
+# agent desk: uploads and the Q&A history stay on this laptop
+desk/uploads/
+desk/history.jsonl
+desk/.codex_*.txt

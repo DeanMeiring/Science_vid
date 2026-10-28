@@ -43,6 +43,65 @@ First episode: **Experiment #1, Langton's Ant** (prototype in `prototypes/`).
 5. Open Claude Code in VS Code and say:
    "read CLAUDE.md and let's continue".
 
+## Make an episode
+
+Each episode is a file in `episodes/` (narration lines, rule cards, title and
+description). Blender is the portable 4.5 LTS in
+`%LOCALAPPDATA%\Programs\Blender\blender-4.5.10-windows-x64\blender.exe`.
+
+```
+.venv/Scripts/python pipeline/voice.py episodes/ep01_farm.py      # narration + timing (seconds)
+blender -b -P blender/render_video.py -- episodes/ep01_farm.py --scale 50 --every 30   # quick draft frames
+.venv/Scripts/python pipeline/compose.py episodes/ep01_farm.py --draft                # draft video
+blender -b -P blender/render_video.py -- episodes/ep01_farm.py   # full size (~35-60 min, low priority)
+.venv/Scripts/python pipeline/compose.py episodes/ep01_farm.py   # final video + thumbnail
+```
+
+Everything lands in `renders/<episode>/`. A stopped render picks up where it
+left off. One still for checking the look: `blender -b -P blender/ant_scene.py
+-- --step 12 --theme farm`.
+
+## Studio: watch and post
+
+```
+.venv/Scripts/python studio/app.py        # then open http://localhost:8765
+```
+
+Watch each episode, edit the title and description, and post it to YouTube
+and Instagram. It only runs on this laptop; logins are kept in `.tokens/`
+(never committed). The keys go in `.env`:
+
+**YouTube** (the same Google Cloud project as CLIPPER is fine):
+1. Google Cloud Console → APIs & Services → Credentials → your OAuth client
+   (type "Web application") → add the redirect URI
+   `http://localhost:8765/auth/youtube/callback`.
+2. Make sure "YouTube Data API v3" is enabled.
+3. Put `YOUTUBE_OAUTH_CLIENT_ID=...` and `YOUTUBE_OAUTH_CLIENT_SECRET=...`
+   in `.env`.
+4. If the consent screen is still in "Testing", add your Google account as a
+   test user. Google ends Testing-mode logins after 7 days, so press Connect
+   again then (or publish the consent screen).
+
+**Instagram** (the same Meta app as CLIPPER is fine):
+1. The Instagram account must be a professional (creator or business)
+   account, linked to a Facebook Page.
+2. Meta app → Facebook Login → Settings → Valid OAuth Redirect URIs: add
+   `http://localhost:8765/auth/instagram/callback`.
+3. Put `INSTAGRAM_APP_ID=...` and `INSTAGRAM_APP_SECRET=...` in `.env`
+   (optional: `INSTAGRAM_FB_CONFIG_ID=...`).
+
+## Agent desk: ask Claude and Codex
+
+```
+.venv/Scripts/python desk/app.py          # then open http://localhost:8770
+```
+
+One page on this laptop to ask Claude Code, Codex or both the same question (with files attached), and a
+"You two talk to each other" button: they take turns on a topic, reading the conversation so far, and stop
+when they agree. It drives the `claude` and `codex` command-line tools you're already logged in to (no extra
+cost). Read-only unless "Allow file edits" is ticked; it never pushes, merges or posts. It only listens on
+127.0.0.1: never put it on the internet. Uploads and history stay in `desk/` (gitignored).
+
 ## Run the prototypes
 
 ```

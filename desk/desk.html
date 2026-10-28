@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Desk</title>
+<style>
+:root {
+  --bg: #f6f4ef; --card: #ffffff; --ink: #22201d; --muted: #6f6a62; --line: #e3ded4;
+  --claude: #c8693f; --claude-bg: #fbeee7; --codex: #2f6fd6; --codex-bg: #e9f0fc;
+  --ok: #2e8b57; --bad: #c0392b; --accent: #22201d;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #171614; --card: #211f1c; --ink: #eeeae3; --muted: #a39d93; --line: #35322d;
+          --claude: #e48a5f; --claude-bg: #33241c; --codex: #6ea0f0; --codex-bg: #1c2638; --accent: #eeeae3; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 20px 16px 60px; }
+header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+h1 { font-size: 22px; margin: 0; flex: 1; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px; background: var(--card);
+        border: 1px solid var(--line); font-size: 13px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+.dot.busy { background: #e6a700; animation: pulse 1s infinite; }
+.dot.missing { background: var(--bad); }
+@keyframes pulse { 50% { opacity: .3; } }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+.card h2 { font-size: 15px; margin: 0 0 10px; }
+textarea { width: 100%; min-height: 96px; resize: vertical; border: 1px solid var(--line); border-radius: 10px; padding: 10px;
+           font: inherit; background: var(--bg); color: var(--ink); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+button { font: inherit; border-radius: 10px; border: 1px solid var(--line); padding: 8px 14px; cursor: pointer; background: var(--card); color: var(--ink); }
+button.claude { background: var(--claude); color: #fff; border-color: var(--claude); }
+button.codex { background: var(--codex); color: #fff; border-color: var(--codex); }
+button.both { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+button.talk { background: linear-gradient(90deg, var(--claude), var(--codex)); color: #fff; border: 0; font-weight: 600; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.small { padding: 3px 10px; font-size: 13px; }
+label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+.files { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.chip { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--bg); border: 1px solid var(--line); }
+.chip button { border: 0; background: none; padding: 0 0 0 4px; color: var(--muted); }
+.spacer { flex: 1; }
+.msg { border-radius: 12px; padding: 10px 12px; margin-top: 10px; border: 1px solid var(--line); }
+.msg.claude { background: var(--claude-bg); border-color: color-mix(in srgb, var(--claude) 35%, transparent); }
+.msg.codex { background: var(--codex-bg); border-color: color-mix(in srgb, var(--codex) 35%, transparent); }
+.who { font-weight: 600; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.who.claude { color: var(--claude); } .who.codex { color: var(--codex); }
+.meta { color: var(--muted); font-weight: 400; }
+.text { white-space: pre-wrap; word-wrap: break-word; margin-top: 4px; }
+.q { color: var(--muted); font-size: 13px; white-space: pre-wrap; margin-bottom: 4px; }
+.err { color: var(--bad); }
+.note { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } }
+#toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--accent); color: var(--bg);
+         padding: 8px 14px; border-radius: 10px; display: none; max-width: 90vw; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Agent Desk</h1>
+    <span class="pill"><span class="dot" id="d-claude"></span>Claude <span class="meta" id="s-claude"></span></span>
+    <span class="pill"><span class="dot" id="d-codex"></span>Codex <span class="meta" id="s-codex"></span></span>
+  </header>
+
+  <section class="card">
+    <h2>Ask</h2>
+    <textarea id="prompt" placeholder="Ask Claude, Codex or both... (Ctrl+Enter asks both)"></textarea>
+    <div class="files" id="attached"></div>
+    <div class="row">
+      <button id="attach">Attach files</button>
+      <input type="file" id="file" multiple hidden>
+      <label><input type="checkbox" id="edits"> Allow file edits (never push or post)</label>
+      <label><input type="checkbox" id="context" checked> Remember the last answers</label>
+      <span class="spacer"></span>
+      <button class="claude" data-ask="claude">Ask Claude</button>
+      <button class="codex" data-ask="codex">Ask Codex</button>
+      <button class="both" data-ask="both">Ask both</button>
+    </div>
+    <p class="note">Read-only unless you tick "Allow file edits". Attached files are saved in <code>desk/uploads/</code>.</p>
+  </section>
+
+  <section class="card">
+    <h2>You two talk to each other</h2>
+    <p class="note" style="margin-top:0">Claude and Codex take turns on the topic in the box above, each reading the conversation so far.
+      They stop early when they agree. Always read-only.</p>
+    <div class="row">
+      <label>Rounds <select id="rounds"><option>2</option><option selected>3</option><option>4</option><option>5</option></select></label>
+      <span class="spacer"></span>
+      <button class="talk" id="talk">You two talk to each other</button>
+    </div>
+  </section>
+
+  <div id="feed"></div>
+</main>
+<div id="toast"></div>
+<script>
+const $ = (s) => document.querySelector(s);
+let attached = [];
+let state = { jobs: [], busy: {}, talks: {}, installed: {} };
+
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", 3500); }
+async function api(path, body) {
+  const r = await fetch(path, { method: body === undefined ? "GET" : "POST", headers: { "Content-Type": "application/json" },
+                                body: body === undefined ? undefined : JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.detail || r.statusText);
+  return j;
+}
+
+// ---- files
+$("#attach").onclick = () => $("#file").click();
+$("#file").onchange = async (e) => {
+  for (const f of e.target.files) {
+    const data = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(f); });
+    try { const r = await api("/api/upload", { name: f.name, data }); attached.push(r.name); } catch (err) { toast(err.message); }
+  }
+  e.target.value = ""; drawAttached();
+};
+function drawAttached() {
+  const box = $("#attached"); box.replaceChildren();
+  attached.forEach((n, i) => {
+    const c = document.createElement("span"); c.className = "chip"; c.textContent = n;
+    const x = document.createElement("button"); x.textContent = "×"; x.title = "Don't send this file";
+    x.onclick = () => { attached.splice(i, 1); drawAttached(); }; c.append(x); box.append(c);
+  });
+}
+
+// ---- ask / talk
+async function ask(which) {
+  const prompt = $("#prompt").value.trim();
+  if (!prompt) return toast("Type a question first");
+  const agents = which === "both" ? ["claude", "codex"] : [which];
+  try {
+    await api("/api/ask", { prompt, agents, files: attached, edits: $("#edits").checked, context: $("#context").checked });
+    $("#prompt").value = ""; attached = []; drawAttached(); refresh();
+  } catch (err) { toast(err.message); }
+}
+document.querySelectorAll("[data-ask]").forEach((b) => b.onclick = () => ask(b.dataset.ask));
+$("#prompt").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) ask("both"); });
+$("#talk").onclick = async () => {
+  const topic = $("#prompt").value.trim();
+  if (!topic) return toast("Type the topic in the box above first");
+  try { await api("/api/talk", { topic, files: attached, rounds: +$("#rounds").value }); $("#prompt").value = ""; attached = []; drawAttached(); refresh(); }
+  catch (err) { toast(err.message); }
+};
+
+// ---- feed
+const ago = (t) => { const s = Math.max(0, Date.now() / 1000 - t); return s < 60 ? `${Math.round(s)}s` : s < 3600 ? `${Math.round(s / 60)} min` : new Date(t * 1000).toLocaleString(); };
+function message(j, showPrompt) {
+  const m = document.createElement("div"); m.className = `msg ${j.agent}`;
+  const who = document.createElement("div"); who.className = `who ${j.agent}`;
+  who.append(j.agent === "claude" ? "Claude" : "Codex");
+  const meta = document.createElement("span"); meta.className = "meta";
+  const dur = j.finished ? ` · took ${Math.round(j.finished - j.started)}s` : "";
+  meta.textContent = j.status === "running" ? `thinking… ${ago(j.started)}` : `${j.status === "done" ? "" : j.status + " · "}${ago(j.started)} ago${dur}${j.edits ? " · edits allowed" : ""}`;
+  who.append(meta);
+  const sp = document.createElement("span"); sp.className = "spacer"; who.append(sp);
+  if (j.status === "running") {
+    const b = document.createElement("button"); b.className = "small"; b.textContent = "Stop";
+    b.onclick = () => api(`/api/stop/${j.id}`, {}).then(refresh).catch((e) => toast(e.message)); who.append(b);
+  } else if (j.text) {
+    const b = document.createElement("button"); b.className = "small"; b.textContent = "Copy";
+    b.onclick = () => navigator.clipboard.writeText(j.text).then(() => toast("Copied")); who.append(b);
+  }
+  m.append(who);
+  if (showPrompt) { const q = document.createElement("div"); q.className = "q"; q.textContent = "You: " + j.prompt + (j.files?.length ? `\n📎 ${j.files.join(", ")}` : ""); m.append(q); }
+  const t = document.createElement("div"); t.className = "text" + (j.status === "error" ? " err" : "");
+  t.textContent = j.status === "running" ? "…" : (j.text || (j.status === "stopped" ? "(stopped)" : ""));
+  m.append(t);
+  return m;
+}
+function draw() {
+  for (const a of ["claude", "codex"]) {
+    const d = $("#d-" + a); d.className = "dot" + (!state.installed[a] ? " missing" : state.busy[a] ? " busy" : "");
+    $("#s-" + a).textContent = !state.installed[a] ? "not installed" : state.busy[a] ? "busy" : "free";
+  }
+  const anyBusy = state.busy.claude || state.busy.codex;
+  $("#talk").disabled = !!anyBusy;
+  // group: plain asks with the same prompt and start (Ask both) side by side; talks as one card
+  const feed = $("#feed"); feed.replaceChildren();
+  const seen = new Set(); const jobs = [...state.jobs].reverse();
+  for (const j of jobs) {
+    if (seen.has(j.id)) continue;
+    const card = document.createElement("section"); card.className = "card";
+    if (j.talk) {
+      const turns = state.jobs.filter((x) => x.talk === j.talk); turns.forEach((x) => seen.add(x.id));
+      const info = state.talks[j.talk];
+      const h = document.createElement("div"); h.className = "who";
+      h.append("Claude ⇄ Codex"); const meta = document.createElement("span"); meta.className = "meta";
+      meta.textContent = info ? ` · ${info.topic.slice(0, 140)}` : ""; h.append(meta);
+      const sp = document.createElement("span"); sp.className = "spacer"; h.append(sp);
+      if (info && !info.done) { const b = document.createElement("button"); b.className = "small"; b.textContent = "Stop the talk";
+        b.onclick = () => api(`/api/stop_talk/${j.talk}`, {}).then(refresh).catch((e) => toast(e.message)); h.append(b); }
+      card.append(h); turns.forEach((x) => card.append(message(x, false)));
+    } else {
+      const twin = jobs.find((x) => x.id !== j.id && !x.talk && x.prompt === j.prompt && Math.abs(x.started - j.started) < 3);
+      seen.add(j.id);
+      if (twin && !seen.has(twin.id)) {
+        seen.add(twin.id);
+        const q = document.createElement("div"); q.className = "q"; q.textContent = "You: " + j.prompt; card.append(q);
+        const g = document.createElement("div"); g.className = "grid2";
+        const [a, b] = j.agent === "claude" ? [j, twin] : [twin, j];
+        g.append(message(a, false), message(b, false)); card.append(g);
+      } else card.append(message(j, true));
+    }
+    feed.append(card);
+  }
+}
+let lastJson = "";
+async function refresh() {
+  try {
+    const st = await api("/api/state"); const js = JSON.stringify(st);
+    const running = st.jobs.some((j) => j.status === "running");
+    if (js === lastJson && !running) return;          // nothing new: don't redraw (keeps text selection)
+    lastJson = js; state = st; draw();
+  } catch (e) { /* server restarting */ }
+}
+refresh(); setInterval(refresh, 1500);
+</script>
+</body>
+</html>

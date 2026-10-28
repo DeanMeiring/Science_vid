@@ -315,7 +315,8 @@ def pair_new():
 @app.get("/api/pairs/{pid}")
 def pair_get(pid: str):
     p = get_pair(pid)
-    return dict(pair=p, claude=public(PC.chat(p, "claude")), codex=public(PC.chat(p, "codex")), usage=PC.usage(p))
+    return dict(pair=p, claude=public(PC.chat(p, "claude")), codex=public(PC.chat(p, "codex")), usage=PC.usage(p),
+                render=PC.render_eta(p))
 
 @app.post("/api/pairs/{pid}/send")
 async def pair_send(pid: str, m: PairSend):

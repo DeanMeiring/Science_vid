@@ -508,6 +508,45 @@ def outputs(p):
         if str(f.resolve()) in seen: seen[str(f.resolve())]["flag"] = True
     return sorted(seen.values(), key=lambda x: -x["mtime"])[:200]
 
+# ---------------- how long a render has left ----------------
+FRAME = (".jpg", ".png", ".exr")
+FRAMES_OF = re.compile(r"frame \d+\s*/\s*(\d+)")         # render scripts log "frame 207/1058 ..."
+ETA_CACHE = {}                                            # pair id -> (when, answer): the page asks every second
+
+def render_eta(p):
+    """While Blender renders for a build: frames done of the whole video, seconds per frame, time left.
+    Counts the frames saved so far (a stopped render picks up where it left off, so batches add up)."""
+    hit = ETA_CACHE.get(p["id"])
+    if hit and time.time() - hit[0] < 5: return hit[1]
+    ETA_CACHE[p["id"]] = (time.time(), None)
+    cmds = [e["what"] for a in ("claude", "codex") if chat(p, a)
+            for e in chat(p, a)["events"][-6:] if e["type"] == "tool" and e.get("out") is None and "blender" in e["what"].lower()]
+    if not p.get("build") or not cmds: return None
+    renders = CC.ROOT / "renders"; best = None
+    for ep in (renders.iterdir() if renders.exists() else []):             # the frames folder written to last
+        for d in ([ep] + [x for x in ep.iterdir() if x.is_dir()]) if ep.is_dir() else []:
+            try: newest = max((f.stat().st_mtime for f in d.iterdir() if f.suffix.lower() in FRAME), default=0)
+            except OSError: continue
+            if newest > time.time() - 180 and (not best or newest > best[0]): best = (newest, d)
+    if not best: return None
+    d = best[1]
+    times = sorted(f.stat().st_mtime for f in d.iterdir() if f.suffix.lower() in FRAME)
+    gaps = sorted(b - a for a, b in zip(times[-31:], times[-30:]))
+    per = gaps[len(gaps) // 2] if gaps else None          # the median: a pause between batches doesn't skew it
+    total = None
+    for log in sorted((d.parent if d.parent != renders else d).glob("*.log"), key=lambda f: -f.stat().st_mtime)[:1]:
+        found = FRAMES_OF.findall(log.read_text(encoding="utf-8", errors="replace")[-20000:])
+        if found: total = int(found[-1])
+    if not total:                                         # else the batch's --end (0 means "to the end": unknown)
+        ends = [int(x) for x in re.findall(r"--end\D{1,4}(\d+)", cmds[-1]) if int(x) > 0]
+        total = max(ends) if ends else None
+    done = len(times)
+    left = max(0, total - done) * per if total and per else None
+    ans = dict(folder=str(d.relative_to(renders)), done=done, total=total, per=per, left=left,
+               finish=time.time() + left if left is not None else None)
+    ETA_CACHE[p["id"]] = (time.time(), ans)
+    return ans
+
 def resolve_output(p, path):
     """Where a PHASE READY output path points (relative ones are inside the build folder)."""
     f = Path(path)

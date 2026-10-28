@@ -183,6 +183,7 @@ label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; al
           <button class="both" id="build">Build together (3 rounds per phase)</button>
           <span class="note" id="collabnote" style="margin:0"></span>
           <span class="spacer"></span>
+          <button class="both" id="carry" hidden>Carry on the build</button>
           <button id="pstop" hidden>Stop both</button>
         </div>
         <p class="note" id="collabhelp" hidden>Collaborate: type the task in the box, then they take turns on it (Claude first),
@@ -191,6 +192,8 @@ label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; al
           isn't touched). Claude writes and commits, Codex reviews and tests. Edits and test runs there don't ask you;
           Blender, installs, deletes and the internet still do. Nobody pushes: you do.</p>
         <p class="note" id="buildinfo" hidden></p>
+        <div class="row" id="videorow" hidden><span>🎬 <b>A video is ready:</b> <span id="videoname"></span></span>
+          <button class="both" id="studio">Open the posting studio</button></div>
         <div id="outputs" hidden>
           <div class="row"><strong>Outputs from this build</strong><span class="note" style="margin:0">newest first; ★ = what they pointed you to</span>
             <span class="spacer"></span><button class="small" id="out-refresh">Refresh</button></div>
@@ -439,6 +442,17 @@ $("#collab").onclick = async () => {
   try { await api(`/api/pairs/${open.id}/collab`, { task, files: cattached, rounds: +$("#crounds").value }); clearComposer(); await pollChats(true); }
   catch (e) { toast(e.message); }
 };
+$("#carry").onclick = async () => {
+  try {
+    await api(`/api/pairs/${open.id}/carry`, { notes: $("#cprompt").value.trim(), rounds: +$("#crounds").value });
+    clearComposer(); await pollChats(true);
+  } catch (e) { toast(e.message); }
+};
+$("#studio").onclick = async () => {
+  const w = window.open("about:blank", "_blank");      // open now, so the browser doesn't block it as a popup
+  try { toast("Opening the studio…"); const r = await api("/api/studio", {}); w ? (w.location = r.url) : window.open(r.url, "_blank"); }
+  catch (e) { if (w) w.close(); toast(e.message); }
+};
 $("#pstop").onclick = () => api(`/api/pairs/${open.id}/stop`, {}).then(() => pollChats(true)).catch((e) => toast(e.message));
 
 function drawChats() {
@@ -601,6 +615,10 @@ function drawOpen() {
     $("#buildinfo").hidden = !p.build;
     if (p.build) $("#buildinfo").textContent = `Build folder: ${p.build.path} (branch ${p.build.branch})`;
     $("#pstop").hidden = !(any || collab);
+    $("#carry").hidden = !(p.build && col?.mode === "build" && !collab && col.state !== "done");
+    $("#build").hidden = !$("#carry").hidden;
+    const vid = outs.find((o) => /\.mp4$/i.test(o.path) && !/draft/i.test(o.name));
+    $("#videorow").hidden = !vid; if (vid) $("#videoname").textContent = where(vid.path);
     $("#collabnote").textContent = col ? (collab ? (inReview ? "Waiting for you: a phase is ready" : `${col.mode === "build" ? "Building" : "Collaborating"}: round ${col.round} of ${col.rounds}${col.mode === "build" ? " in this phase" : ""}, ${NAMES[col.turn]}'s turn`) : `Last ${col.mode === "build" ? "build" : "collaboration"}: ${col.note}`) : "";
   }
   stick = false;

@@ -371,6 +371,40 @@ async def pair_build(pid: str, m: Build):
     PC.start_build(p, m.task.strip(), m.files, max(1, min(10, m.rounds)), m.branch)
     return {"ok": True, "path": p["build"]["path"]}
 
+class Carry(BaseModel):
+    notes: str = ""
+    rounds: int = 4
+
+@app.post("/api/pairs/{pid}/carry")
+async def pair_carry(pid: str, m: Carry):
+    """Carry on a build that stopped or paused (e.g. a usage limit), in the same folder and branch."""
+    p = get_pair(pid)
+    if any(PC.chat(p, a)["status"] == "running" for a in ("claude", "codex")): raise HTTPException(409, "wait until both have finished")
+    err = PC.carry_on(p, m.notes, max(1, min(10, m.rounds)))
+    if err: raise HTTPException(409, err)
+    return {"ok": True}
+
+STUDIO = "http://127.0.0.1:8765"
+STUDIO_PROC = {}
+
+def studio_up():
+    import urllib.request
+    try: urllib.request.urlopen(STUDIO + "/api/state", timeout=3); return True
+    except Exception: return False
+
+@app.post("/api/studio")
+async def studio():
+    """Start the posting studio (if it isn't running) so it also lists the builds' videos. Dean still posts by hand."""
+    if await asyncio.to_thread(studio_up): return {"url": STUDIO, "started": False}
+    env = {**os.environ, "STUDIO_EPISODES": ";".join(str(Path(p["build"]["path"]) / "episodes")
+                                                     for p in PC.PAIRS.values() if p.get("build"))}
+    STUDIO_PROC["p"] = subprocess.Popen([str(ROOT / ".venv" / "Scripts" / "python.exe"), "-X", "utf8", "studio/app.py"],
+                                        cwd=ROOT, env=env, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    for _ in range(30):
+        await asyncio.sleep(1)
+        if await asyncio.to_thread(studio_up): return {"url": STUDIO, "started": True}
+    raise HTTPException(500, "the studio didn't start")
+
 class Review(BaseModel):
     action: str                  # continue / stop
     notes: str = ""

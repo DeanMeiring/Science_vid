@@ -3,7 +3,7 @@
 Run:  .venv/Scripts/python studio/app.py      then open http://localhost:8765
 Only listens on this laptop (127.0.0.1). Logins are kept in .tokens/ (gitignored).
 """
-import json, secrets, sys, threading, time, traceback
+import json, os, secrets, sys, threading, time, traceback
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -26,9 +26,20 @@ _states: dict = {}           # OAuth CSRF state -> (time, which)
 _jobs: dict = {}             # post job id -> {"state", "log", "result", "error"}
 
 
+def _episode_dirs():
+    """episodes/, plus the episode folders of builds not merged yet (STUDIO_EPISODES, set by the agent desk)."""
+    extra = [Path(x) for x in os.environ.get("STUDIO_EPISODES", "").split(";") if x.strip()]
+    return [ROOT / "episodes"] + [d for d in extra if d.is_dir()]
+
+def _episode_files():
+    seen = {}
+    for d in reversed(_episode_dirs()):                # main's own episodes win over a build's copy
+        for p in d.glob("ep*.py"): seen[p.stem] = p
+    return [seen[k] for k in sorted(seen)]
+
 def _episode(name: str):
-    p = ROOT / "episodes" / f"{name}.py"
-    if "/" in name or "\\" in name or not p.exists():
+    p = next((f for f in _episode_files() if f.stem == name), None)
+    if "/" in name or "\\" in name or not p:
         raise HTTPException(404, "unknown episode")
     return p, load_episode(p), ROOT / "renders" / name
 
@@ -56,7 +67,7 @@ def page():
 @app.get("/api/state")
 def state():
     eps = []
-    for p in sorted((ROOT / "episodes").glob("ep*.py")):
+    for p in _episode_files():
         ep = load_episode(p); d = ROOT / "renders" / p.stem
         video, draft = _video(d, p.stem)
         saved = _read(d / "post.json", {})

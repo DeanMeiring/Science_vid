@@ -33,7 +33,8 @@ SHELL = ("Bash", "PowerShell")
 ASK = re.compile(r"blender|render_\w*\.py|\b(pip|uv|npm|npx|winget|choco)\b|\b(curl|wget|Invoke-WebRequest|Invoke-RestMethod|iwr|irm)\b|"
                  r"\brm\s+-\w*r|Remove-Item\b.*-Recurse|\brmdir\b|\bdel\s+/s|\bgit\s+(reset\s+--hard|clean|checkout\s+--|restore|"
                  r"branch\s+-D|rebase|worktree|(checkout|switch)\s+(?!-b\b|-c\b)|stash\s+(drop|clear))|Science_vid(?!_builds)[\\/](?!\.venv[\\/])|\bshutdown\b|Stop-Process|taskkill", re.I)
-SIDE_NO = re.compile(r"blender|render_\w*\.py", re.I)      # a side turn never starts a second render
+# a side turn never starts a second render (reading or diffing the render scripts is fine)
+SIDE_NO = re.compile(r"blender(\.exe)?['\"]?\s+-b|\$b\b.*\s-b\b|python\S*\s[^|;&]*render_\w*\.py", re.I)
 EDIT = ("Write", "Edit", "MultiEdit", "NotebookEdit")
 FREE = ("Read", "Glob", "Grep", "WebFetch", "WebSearch", "TodoWrite", "Task", "Agent", "LS")
 

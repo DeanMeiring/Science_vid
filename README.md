@@ -107,6 +107,9 @@ conversation and show every step. Before changing a file or running a command th
 page asks with Allow once / Allow in this chat / Deny. Push, merge and post commands are refused whatever is
 clicked. Claude runs through the Claude Agent SDK (`desk/claude_chat.py`), Codex through `codex app-server`
 (`desk/codex_chat.py`, in its workspace-write sandbox: writes only inside the repo, no network).
+**Start Claude + Codex** opens both side by side: send a message to one or both, or type a task and press
+**Collaborate for N rounds**. They take turns (Claude first), each getting the other's last reply, and stop
+early when both start a reply with AGREED (`desk/pair_chat.py`). Every change still asks first.
 
 ## Run the prototypes
 

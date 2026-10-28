@@ -16,7 +16,7 @@
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-main { max-width: 980px; margin: 0 auto; padding: 20px 16px 60px; }
+main { max-width: 1400px; margin: 0 auto; padding: 20px 16px 60px; }
 header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
 h1 { font-size: 22px; margin: 0; flex: 1; }
 .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px; background: var(--card);
@@ -81,6 +81,12 @@ label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; al
 .perm { border: 2px solid #e6a700; border-radius: 12px; padding: 10px 12px; background: color-mix(in srgb, #e6a700 10%, var(--card)); }
 .perm .what { font-weight: 600; word-break: break-word; }
 .perm details pre { white-space: pre-wrap; font-size: 12px; max-height: 200px; overflow: auto; }
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 1000px) { .split { grid-template-columns: 1fr; } }
+.pane { border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; min-width: 0; }
+.pane.claude { border-top: 3px solid var(--claude); } .pane.codex { border-top: 3px solid var(--codex); }
+.pane .thread { max-height: 56vh; }
+.chatlist .item.pair.on { border-color: var(--accent); background: var(--bg); }
 .working { color: var(--muted); font-size: 13px; margin-top: 10px; animation: pulse 1.4s infinite; }
 #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--accent); color: var(--bg);
          padding: 8px 14px; border-radius: 10px; display: none; max-width: 90vw; }
@@ -104,23 +110,37 @@ label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; al
       <section class="card chatlist">
         <button class="claude" data-new="claude" style="width:100%">+ Chat with Claude</button>
         <button class="codex" data-new="codex" style="width:100%;margin-top:6px">+ Chat with Codex</button>
+        <button class="talk" id="newpair" style="width:100%;margin-top:6px">Start Claude + Codex</button>
         <div id="chats"></div>
       </section>
-      <section class="card">
+      <section class="card" style="min-width:0">
         <div class="row" style="margin-top:0">
           <strong id="chattitle">Pick a chat or start a new one</strong><span class="spacer"></span>
-          <button class="small" id="delchat" hidden>Delete chat</button>
+          <button class="small" id="delchat" hidden>Delete</button>
         </div>
-        <div class="thread" id="thread"></div>
+        <div id="views"></div>
         <textarea id="cprompt" placeholder="Message... (Ctrl+Enter to send)" style="margin-top:12px"></textarea>
         <div class="files" id="cattached"></div>
         <div class="row">
           <button id="cattach">Attach files</button><input type="file" id="cfile" multiple hidden>
-          <span class="note" style="margin:0">It asks before changing files or running new commands. It never pushes, merges or posts.</span>
+          <span class="note" style="margin:0">They ask before changing files or running new commands. They never push, merge or post.</span>
           <span class="spacer"></span>
-          <button id="cstop" hidden>Stop</button>
-          <button class="claude" id="csend">Send</button>
+          <span id="solobtns" class="row" style="margin:0"><button id="cstop" hidden>Stop</button><button class="claude" id="csend">Send</button></span>
+          <span id="pairbtns" class="row" style="margin:0" hidden>
+            <button class="claude" data-to="claude">Send to Claude</button>
+            <button class="codex" data-to="codex">Send to Codex</button>
+            <button class="both" data-to="both">Send to both</button>
+          </span>
         </div>
+        <div class="row" id="collabrow" hidden>
+          <label>Rounds <select id="crounds"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select></label>
+          <button class="talk" id="collab">Collaborate for 3 rounds</button>
+          <span class="note" id="collabnote" style="margin:0"></span>
+          <span class="spacer"></span>
+          <button id="pstop" hidden>Stop both</button>
+        </div>
+        <p class="note" id="collabhelp" hidden>Collaborate: type the task in the box, then they take turns on it (Claude first),
+          each reading the other's last reply. They stop early when both start a reply with AGREED.</p>
       </section>
     </div>
   </div>
@@ -283,8 +303,9 @@ async function refresh() {
 }
 refresh(); setInterval(refresh, 1500);
 
-// ================= Chat with Claude =================
-let chats = [], openId = null, openChat = null, cattached = [], stick = true;
+// ================= Chats (Claude, Codex, or both side by side) =================
+const NAMES = { claude: "Claude", codex: "Codex" };
+let chats = [], pairs = [], open = null, data = null, cattached = [], stick = true, lastList = "", lastData = "";
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 function fmt(s) {          // a little markdown: code blocks, inline code, bold (escaped first, so it's safe)
@@ -297,70 +318,123 @@ document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => {
 });
 $("#cattach").onclick = () => $("#cfile").click();
 $("#cfile").onchange = async (e) => { await uploadAll(e.target.files, cattached); e.target.value = ""; drawChips($("#cattached"), cattached); };
+function clearComposer() { $("#cprompt").value = ""; cattached = []; drawChips($("#cattached"), cattached); stick = true; }
+async function openItem(kind, id) { open = id ? { kind, id } : null; data = null; lastData = ""; stick = true; setView(); await pollChats(true); }
+
 document.querySelectorAll("[data-new]").forEach((b) => b.onclick = async () => {
-  try { const c = await api("/api/chats", { agent: b.dataset.new }); openId = c.id; openChat = null; await pollChats(true); $("#cprompt").focus(); }
+  try { const c = await api("/api/chats", { agent: b.dataset.new }); await openItem("chat", c.id); $("#cprompt").focus(); }
   catch (e) { toast(e.message); }
 });
-const who = () => (openChat && openChat.agent === "codex" ? "Codex" : "Claude");
-$("#delchat").onclick = async () => {
-  if (!openId || !confirm("Delete this chat from the desk?")) return;
-  try { await api(`/api/chats/${openId}/delete`, {}); openId = null; openChat = null; await pollChats(true); } catch (e) { toast(e.message); }
+$("#newpair").onclick = async () => {
+  try { const p = await api("/api/pairs", {}); await openItem("pair", p.id); $("#cprompt").focus(); } catch (e) { toast(e.message); }
 };
-async function send() {
+$("#delchat").onclick = async () => {
+  if (!open || !confirm(open.kind === "pair" ? "Delete both chats from the desk?" : "Delete this chat from the desk?")) return;
+  try { await api(open.kind === "pair" ? `/api/pairs/${open.id}/delete` : `/api/chats/${open.id}/delete`, {}); await openItem(null, null); }
+  catch (e) { toast(e.message); }
+};
+async function sendSolo() {
   const prompt = $("#cprompt").value.trim();
   if (!prompt) return toast("Type a message first");
   try {
-    if (!openId) { const c = await api("/api/chats", { agent: "claude" }); openId = c.id; }
-    await api(`/api/chats/${openId}/send`, { prompt, files: cattached });
-    $("#cprompt").value = ""; cattached = []; drawChips($("#cattached"), cattached); stick = true; await pollChats(true);
+    if (!open) { const c = await api("/api/chats", { agent: "claude" }); await openItem("chat", c.id); }
+    await api(`/api/chats/${open.id}/send`, { prompt, files: cattached }); clearComposer(); await pollChats(true);
   } catch (e) { toast(e.message); }
 }
-$("#csend").onclick = send;
-$("#cprompt").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) send(); });
-$("#cstop").onclick = () => api(`/api/chats/${openId}/stop`, {}).then(() => pollChats(true)).catch((e) => toast(e.message));
+async function sendPair(to) {
+  const prompt = $("#cprompt").value.trim();
+  if (!prompt) return toast("Type a message first");
+  try { await api(`/api/pairs/${open.id}/send`, { prompt, files: cattached, to }); clearComposer(); await pollChats(true); }
+  catch (e) { toast(e.message); }
+}
+$("#csend").onclick = sendSolo;
+document.querySelectorAll("[data-to]").forEach((b) => b.onclick = () => sendPair(b.dataset.to));
+$("#cprompt").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) open?.kind === "pair" ? sendPair("both") : sendSolo();
+});
+const stopChat = (id) => api(`/api/chats/${id}/stop`, {}).then(() => pollChats(true)).catch((e) => toast(e.message));
+$("#cstop").onclick = () => stopChat(open.id);
+$("#crounds").onchange = () => { const n = +$("#crounds").value; $("#collab").textContent = `Collaborate for ${n} round${n > 1 ? "s" : ""}`; };
+$("#collab").onclick = async () => {
+  const task = $("#cprompt").value.trim();
+  if (!task) return toast("Type the task in the box first");
+  try { await api(`/api/pairs/${open.id}/collab`, { task, files: cattached, rounds: +$("#crounds").value }); clearComposer(); await pollChats(true); }
+  catch (e) { toast(e.message); }
+};
+$("#pstop").onclick = () => api(`/api/pairs/${open.id}/stop`, {}).then(() => pollChats(true)).catch((e) => toast(e.message));
 
 function drawChats() {
   const box = $("#chats"); box.replaceChildren();
-  for (const c of chats) {
-    const b = el("button", `item ${c.agent}` + (c.id === openId ? " on" : ""));
-    if (c.waiting) b.append(el("span", "badge", "needs you"));
-    const tg = el("span", "tag", c.agent === "codex" ? "Codex" : "Claude"); tg.style.color = `var(--${c.agent})`; b.append(tg);
-    b.append((c.status === "running" ? "⏳ " : "") + c.title);
-    b.onclick = async () => { openId = c.id; openChat = null; stick = true; await pollChats(true); };
-    box.append(b);
+  const items = [...pairs.map((p) => ({ kind: "pair", p, created: p.created })),
+                 ...chats.filter((c) => !c.pair).map((c) => ({ kind: "chat", c, created: c.created }))]
+                .sort((a, b) => b.created - a.created);
+  for (const it of items) {
+    if (it.kind === "pair") {
+      const p = it.p, mine = chats.filter((c) => c.pair === p.id);
+      const waiting = mine.reduce((n, c) => n + c.waiting, 0);
+      const busy = mine.some((c) => c.status === "running") || p.collab?.state === "running";
+      const b = el("button", "item pair" + (open?.id === p.id ? " on" : ""));
+      if (waiting) b.append(el("span", "badge", "needs you"));
+      b.append((busy ? "⏳ " : "") + p.title);
+      b.onclick = () => openItem("pair", p.id); box.append(b);
+    } else {
+      const c = it.c;
+      const b = el("button", `item ${c.agent}` + (open?.id === c.id ? " on" : ""));
+      if (c.waiting) b.append(el("span", "badge", "needs you"));
+      const tg = el("span", "tag", NAMES[c.agent] || "Claude"); tg.style.color = `var(--${c.agent})`; b.append(tg);
+      b.append((c.status === "running" ? "⏳ " : "") + c.title);
+      b.onclick = () => openItem("chat", c.id); box.append(b);
+    }
   }
   const waiting = chats.reduce((n, c) => n + c.waiting, 0);
   document.title = waiting ? `(${waiting}) needs you · Agent Desk` : "Agent Desk";
 }
+
+function setView() {          // build the thread boxes for what's open: one thread, or two side by side
+  const v = $("#views"); v.replaceChildren();
+  const isPair = open?.kind === "pair";
+  if (isPair) {
+    const sp = el("div", "split");
+    for (const a of ["claude", "codex"]) {
+      const pane = el("div", "pane " + a), h = el("div", "who " + a);
+      const st = el("span", "meta"); st.id = "st-" + a;
+      const b = el("button", "small", "Stop"); b.id = "stop-" + a; b.hidden = true; b.onclick = () => data && stopChat(data[a].id);
+      h.append(NAMES[a], st, el("span", "spacer"), b);
+      const th = el("div", "thread"); th.id = "th-" + a;
+      pane.append(h, th); sp.append(pane);
+    }
+    v.append(sp);
+  } else { const th = el("div", "thread"); th.id = "th-solo"; v.append(th); }
+  $("#solobtns").hidden = isPair; $("#pairbtns").hidden = !isPair; $("#collabrow").hidden = !isPair; $("#collabhelp").hidden = !isPair;
+  $("#cprompt").placeholder = isPair ? "Message one or both, or type a task and press Collaborate... (Ctrl+Enter sends to both)"
+                                     : "Message... (Ctrl+Enter to send)";
+}
+
 const PERM_DONE = { once: "✓ Allowed once", always: "✓ Allowed for the rest of this chat", deny: "✗ Denied", expired: "✗ Not answered in time" };
-function drawThread() {
-  const th = $("#thread");
+function drawThread(th, chat) {
   const near = th.scrollHeight - th.scrollTop - th.clientHeight < 80;
-  const open = new Set([...th.querySelectorAll("details[open]")].map((d) => d.dataset.k));   // keep expanded steps open
+  const opened = new Set([...th.querySelectorAll("details[open]")].map((d) => d.dataset.k));   // keep expanded steps open
   th.replaceChildren();
-  $("#chattitle").textContent = openChat ? openChat.title : "Pick a chat or start a new one";
-  $("#delchat").hidden = !openChat;
-  const running = !!openChat && openChat.status === "running";
-  $("#cstop").hidden = !running; $("#csend").disabled = running;
-  if (!openChat) return;
-  openChat.events.forEach((e, i) => {
-    const d = el("div", `ev ${e.type} ${openChat.agent || "claude"}`);
+  if (!chat) return;
+  const name = NAMES[chat.agent] || "Claude";
+  chat.events.forEach((e, i) => {
+    const d = el("div", `ev ${e.type} ${chat.agent || "claude"}`);
     if (e.type === "user") d.append(el("div", "bubble", e.text + (e.files?.length ? `\n📎 ${e.files.join(", ")}` : "")));
     else if (e.type === "text") { const b = el("div", "bubble"); b.innerHTML = fmt(e.text); d.append(b); }
     else if (e.type === "tool") {
-      const det = el("details", "tool"); det.dataset.k = "t" + i; det.open = open.has("t" + i);
+      const det = el("details", "tool"); det.dataset.k = "t" + i; det.open = opened.has("t" + i);
       det.append(el("summary", null, `${e.ok === false ? "✗" : e.out === null ? "…" : "✓"} ${e.what}`));
       if (e.out) det.append(el("pre", null, e.out));
       d.append(det);
     } else if (e.type === "perm") {
       const p = el("div", "perm");
-      p.append(el("div", null, `${who()} wants to:`), el("div", "what", e.what));
+      p.append(el("div", null, `${name} wants to:`), el("div", "what", e.what));
       if (e.why && e.why !== e.what) p.append(el("div", "note", e.why));
-      const det = el("details"); det.dataset.k = "p" + i; det.open = open.has("p" + i);
+      const det = el("details"); det.dataset.k = "p" + i; det.open = opened.has("p" + i);
       det.append(el("summary", "note", "details"), el("pre", null, e.detail)); p.append(det);
       if (e.state === "waiting") {
         const row = el("div", "row");
-        for (const [label, dec, cls] of [["Allow once", "once", "claude"], ["Allow in this chat", "always", ""], ["Deny", "deny", ""]]) {
+        for (const [label, dec, cls] of [["Allow once", "once", chat.agent], ["Allow in this chat", "always", ""], ["Deny", "deny", ""]]) {
           const b = el("button", cls, label);
           b.onclick = () => api(`/api/permission/${e.id}`, { decision: dec }).then(() => pollChats(true)).catch((x) => toast(x.message));
           row.append(b);
@@ -372,22 +446,53 @@ function drawThread() {
     else if (e.type === "done") d.append(el("div", "note", `Finished in ${e.seconds}s`));
     th.append(d);
   });
-  if (running && !openChat.events.some((e) => e.type === "perm" && e.state === "waiting")) th.append(el("div", "working", `${who()} is working…`));
+  if (chat.status === "running" && !chat.events.some((e) => e.type === "perm" && e.state === "waiting"))
+    th.append(el("div", "working", `${name} is working…`));
   if (stick || near) th.scrollTop = th.scrollHeight;
+}
+
+function drawOpen() {
+  $("#delchat").hidden = !data;
+  if (!open || !data) {
+    $("#chattitle").textContent = "Pick a chat or start a new one";
+    const th = $("#th-solo"); if (th) th.replaceChildren();
+    $("#cstop").hidden = true; $("#csend").disabled = false; return;
+  }
+  if (open.kind === "chat") {
+    $("#chattitle").textContent = data.title; drawThread($("#th-solo"), data);
+    const r = data.status === "running"; $("#cstop").hidden = !r; $("#csend").disabled = r;
+  } else {
+    const p = data.pair, col = p.collab, collab = col?.state === "running";
+    $("#chattitle").textContent = p.title;
+    let any = false;
+    for (const a of ["claude", "codex"]) {
+      const c = data[a], r = c?.status === "running"; any = any || r;
+      drawThread($("#th-" + a), c);
+      $("#st-" + a).textContent = r ? (c.events.some((e) => e.type === "perm" && e.state === "waiting") ? " · needs you" : " · working") : "";
+      $("#stop-" + a).hidden = !r || collab;
+      document.querySelector(`[data-to="${a}"]`).disabled = r || collab;
+    }
+    document.querySelector('[data-to="both"]').disabled = any || collab;
+    $("#collab").disabled = any || collab; $("#crounds").disabled = collab;
+    $("#pstop").hidden = !(any || collab);
+    $("#collabnote").textContent = col ? (collab ? `Collaborating: round ${col.round} of ${col.rounds}, ${NAMES[col.turn]}'s turn` : `Last collaboration: ${col.note}`) : "";
+  }
   stick = false;
 }
-let lastChats = "", lastChat = "";
+
 async function pollChats(force) {
   try {
-    const cs = await api("/api/chats"); const js = JSON.stringify(cs);
-    if (force || js !== lastChats) { chats = cs; lastChats = js; drawChats(); }
-    if (openId && chats.some((c) => c.id === openId)) {
-      const c = await api(`/api/chats/${openId}`); const k = JSON.stringify(c);
-      if (force || k !== lastChat) { openChat = c; lastChat = k; drawThread(); }   // only redraw on change (keeps selection)
-    } else if (openChat || force) { openId = null; openChat = null; lastChat = ""; drawThread(); }
+    const [cs, ps] = await Promise.all([api("/api/chats"), api("/api/pairs")]);
+    const js = JSON.stringify([cs, ps]);
+    if (force || js !== lastList) { chats = cs; pairs = ps; lastList = js; drawChats(); }
+    if (open && !(open.kind === "pair" ? ps : cs).some((x) => x.id === open.id)) { open = null; setView(); }
+    if (open) {
+      const d = await api(open.kind === "pair" ? `/api/pairs/${open.id}` : `/api/chats/${open.id}`); const k = JSON.stringify(d);
+      if (force || k !== lastData) { data = d; lastData = k; drawOpen(); }   // only redraw on change (keeps selection)
+    } else if (force || data) { data = null; lastData = ""; drawOpen(); }
   } catch (e) { /* server restarting */ }
 }
-pollChats(true); setInterval(() => pollChats(false), 1200);
+setView(); pollChats(true); setInterval(() => pollChats(false), 1200);
 </script>
 </body>
 </html>

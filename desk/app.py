@@ -24,6 +24,7 @@ from pydantic import BaseModel
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import claude_chat as CC
 import codex_chat as XC
+import pair_chat as PC
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -223,7 +224,7 @@ def chats():
     for c in sorted(CC.CHATS.values(), key=lambda c: -c["created"]):
         waiting = sum(1 for e in c["events"] if e["type"] == "perm" and e["state"] == "waiting")
         out.append(dict(id=c["id"], agent=c.get("agent", "claude"), title=c["title"], status=c["status"], created=c["created"], waiting=waiting,
-                        n=len(c["events"])))
+                        n=len(c["events"]), pair=c.get("pair")))
     return out
 
 @app.post("/api/chats")
@@ -265,6 +266,77 @@ def chat_delete(cid: str):
 async def permission(pid: str, d: Decision):
     if d.decision not in ("once", "always", "deny"): raise HTTPException(400, "once, always or deny")
     if not CC.answer(pid, d.decision): raise HTTPException(404, "that question has already been answered")
+    return {"ok": True}
+
+# ---------------- Claude + Codex side by side ----------------
+class PairSend(BaseModel):
+    prompt: str
+    files: list[str] = []
+    to: str = "both"             # both / claude / codex
+
+class Collab(BaseModel):
+    task: str
+    files: list[str] = []
+    rounds: int = 3
+
+def get_pair(pid):
+    p = PC.PAIRS.get(pid)
+    if not p: raise HTTPException(404, "no such pair")
+    return p
+
+def public(c):
+    return {k: v for k, v in c.items() if not k.startswith("_")} if c else None
+
+@app.get("/api/pairs")
+def pairs():
+    return sorted(PC.PAIRS.values(), key=lambda p: -p["created"])
+
+@app.post("/api/pairs")
+def pair_new():
+    if not (AGENTS["claude"] and AGENTS["codex"]): raise HTTPException(400, "both Claude and Codex must be installed")
+    return PC.new_pair()
+
+@app.get("/api/pairs/{pid}")
+def pair_get(pid: str):
+    p = get_pair(pid)
+    return dict(pair=p, claude=public(PC.chat(p, "claude")), codex=public(PC.chat(p, "codex")))
+
+@app.post("/api/pairs/{pid}/send")
+async def pair_send(pid: str, m: PairSend):
+    p = get_pair(pid)
+    if pid in PC.TASKS: raise HTTPException(409, "they're collaborating: wait or press Stop")
+    to = ["claude", "codex"] if m.to == "both" else [m.to]
+    if any(a not in ("claude", "codex") for a in to): raise HTTPException(400, "both, claude or codex")
+    if not m.prompt.strip(): raise HTTPException(400, "type a message first")
+    for a in to:
+        if PC.chat(p, a)["status"] == "running": raise HTTPException(409, f"{NAME[a]} is still working: wait or press Stop")
+    if p["title"] == "Claude + Codex": p["title"] = "Claude + Codex: " + m.prompt.strip().splitlines()[0][:50]; PC.save()
+    for a in to:
+        c = PC.chat(p, a); c["status"] = "running"
+        task = asyncio.create_task(PC.MOD[a].turn(c, m.prompt.strip(), m.files)); TASKS.add(task); task.add_done_callback(TASKS.discard)
+    return {"ok": True}
+
+@app.post("/api/pairs/{pid}/collab")
+async def pair_collab(pid: str, m: Collab):
+    p = get_pair(pid)
+    if pid in PC.TASKS: raise HTTPException(409, "they're already collaborating")
+    if any(PC.chat(p, a)["status"] == "running" for a in ("claude", "codex")): raise HTTPException(409, "wait until both have finished")
+    if not m.task.strip(): raise HTTPException(400, "type the task in the box first")
+    if p["title"] == "Claude + Codex": p["title"] = "Claude + Codex: " + m.task.strip().splitlines()[0][:50]
+    PC.start_collab(p, m.task.strip(), m.files, max(1, min(10, m.rounds)))
+    return {"ok": True}
+
+@app.post("/api/pairs/{pid}/stop")
+async def pair_stop(pid: str):
+    await PC.stop(get_pair(pid))
+    return {"ok": True}
+
+@app.post("/api/pairs/{pid}/delete")
+def pair_delete(pid: str):
+    p = get_pair(pid)
+    if pid in PC.TASKS or any(PC.chat(p, a) and PC.chat(p, a)["status"] == "running" for a in ("claude", "codex")):
+        raise HTTPException(409, "stop it first")
+    PC.delete(p)
     return {"ok": True}
 
 @app.post("/api/upload")

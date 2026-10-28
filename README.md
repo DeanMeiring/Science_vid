@@ -110,6 +110,13 @@ clicked. Claude runs through the Claude Agent SDK (`desk/claude_chat.py`), Codex
 **Start Claude + Codex** opens both side by side: send a message to one or both, or type a task and press
 **Collaborate for N rounds**. They take turns (Claude first), each getting the other's last reply, and stop
 early when both start a reply with AGREED (`desk/pair_chat.py`). Every change still asks first.
+**Build together for N rounds** does the same but builds it: in its own copy of the repo
+(`../Science_vid_builds/<name>`, a git worktree on a new `claude/<name>` branch from `origin/main`), so the main
+folder never changes branch. `.venv`, `renders/` and the third-party assets are linked in, not copied. Claude
+writes and commits, Codex reviews and tests. Edits and test runs inside the build folder don't ask; Blender,
+installs, deletes, the network and anything outside the folder still do. Nobody pushes from the desk.
+To delete a build folder, remove the links first (`rmdir .venv renders assets	hirdparty` inside it), then
+`git worktree remove` it, so nothing can reach the shared folders.
 
 ## Run the prototypes
 

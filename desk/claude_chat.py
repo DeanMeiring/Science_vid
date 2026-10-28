@@ -27,6 +27,24 @@ BLOCK = re.compile(r"\bgit\s+push\b|\bgit\s+merge\b|\bgh\s+pr\s+merge\b|\bgh\s+a
                    r"(localhost|127\.0\.0\.1):8765/api/(episode|post)|publish_reel|upload_video|publish[/\\.](youtube|instagram)",
                    re.I)
 SHELL = ("Bash", "PowerShell")
+# While building, edits and commands run without asking, except these: they always ask Dean
+ASK = re.compile(r"blender|render_\w*\.py|\b(pip|uv|npm|npx|winget|choco)\b|\b(curl|wget|Invoke-WebRequest|Invoke-RestMethod|iwr|irm)\b|"
+                 r"\brm\s+-\w*r|Remove-Item\b.*-Recurse|\brmdir\b|\bdel\s+/s|\bgit\s+(reset\s+--hard|clean|checkout\s+--|restore|"
+                 r"branch\s+-D|rebase|worktree|(checkout|switch)\s+(?!-b\b|-c\b)|stash\s+(drop|clear))|Science_vid(?!_builds)[\\/]|\bshutdown\b|Stop-Process|taskkill", re.I)
+EDIT = ("Write", "Edit", "MultiEdit", "NotebookEdit")
+FREE = ("Read", "Glob", "Grep", "WebFetch", "WebSearch", "TodoWrite", "Task", "Agent", "LS")
+
+def inside(path, roots):
+    try: p = Path(path).resolve()
+    except (OSError, ValueError): return False
+    return any(p == r or r in p.parents for r in roots)
+
+def auto_ok(chat, name, inp):
+    """While building: may this run without asking Dean?"""
+    cwd = Path(chat.get("cwd") or ROOT).resolve()
+    if name in SHELL: return not ASK.search(str(inp.get("command", "")))
+    if name in EDIT: return inside(inp.get("file_path") or inp.get("notebook_path") or "", [cwd, (ROOT / "renders").resolve()])
+    return name in FREE
 
 CHATS = {}                            # id -> chat dict
 RUNNING = {}                          # chat id -> ClaudeSDKClient while a turn runs
@@ -90,6 +108,8 @@ def make_permission(chat):
     async def can_use(name, inp, ctx):
         if name in SHELL and BLOCK.search(str(inp.get("command", ""))):
             return PermissionResultDeny(message="The agent desk never pushes, merges or posts. Ask Dean to do it.")
+        if chat.get("auto") and auto_ok(chat, name, inp):
+            return PermissionResultAllow()
         key = always_key(name, inp)
         if key in chat["always"]:
             return PermissionResultAllow()
@@ -123,9 +143,9 @@ async def turn(chat, prompt, files):
     full = prompt
     if files: full += "\n\nFiles I attached (read them as needed): " + ", ".join(f"desk/uploads/{f}" for f in files)
     opts = ClaudeAgentOptions(
-        cwd=str(ROOT), cli_path=shutil.which("claude"), permission_mode="default", resume=chat["session_id"],
+        cwd=str(chat.get("cwd") or ROOT), cli_path=shutil.which("claude"), permission_mode="default", resume=chat["session_id"],
         can_use_tool=make_permission(chat), setting_sources=["user", "project", "local"],
-        system_prompt={"type": "preset", "preset": "claude_code", "append": GUARD},
+        system_prompt={"type": "preset", "preset": "claude_code", "append": GUARD + chat.get("guard_extra", "")},
         hooks={"PreToolUse": [HookMatcher(matcher=None, hooks=[guard_hook])]})
     t0 = time.time(); tools = {}
     try:

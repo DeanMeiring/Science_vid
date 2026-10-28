@@ -133,14 +133,19 @@ label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; al
           </span>
         </div>
         <div class="row" id="collabrow" hidden>
-          <label>Rounds <select id="crounds"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select></label>
+          <label>Rounds <select id="crounds"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option><option>8</option><option>10</option></select></label>
           <button class="talk" id="collab">Collaborate for 3 rounds</button>
+          <button class="both" id="build">Build together for 3 rounds</button>
           <span class="note" id="collabnote" style="margin:0"></span>
           <span class="spacer"></span>
           <button id="pstop" hidden>Stop both</button>
         </div>
         <p class="note" id="collabhelp" hidden>Collaborate: type the task in the box, then they take turns on it (Claude first),
-          each reading the other's last reply. They stop early when both start a reply with AGREED.</p>
+          each reading the other's last reply. They stop early when both start a reply with AGREED.<br>
+          Build together: the same, but they build it in a separate copy of the repo on a new branch (your main folder
+          isn't touched). Claude writes and commits, Codex reviews and tests. Edits and test runs there don't ask you;
+          Blender, installs, deletes and the internet still do. Nobody pushes: you do.</p>
+        <p class="note" id="buildinfo" hidden></p>
       </section>
     </div>
   </div>
@@ -354,7 +359,23 @@ $("#cprompt").addEventListener("keydown", (e) => {
 });
 const stopChat = (id) => api(`/api/chats/${id}/stop`, {}).then(() => pollChats(true)).catch((e) => toast(e.message));
 $("#cstop").onclick = () => stopChat(open.id);
-$("#crounds").onchange = () => { const n = +$("#crounds").value; $("#collab").textContent = `Collaborate for ${n} round${n > 1 ? "s" : ""}`; };
+$("#crounds").onchange = () => {
+  const n = +$("#crounds").value, r = `${n} round${n > 1 ? "s" : ""}`;
+  $("#collab").textContent = `Collaborate for ${r}`; $("#build").textContent = `Build together for ${r}`;
+};
+const slug = (t) => t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(" ").slice(0, 4).join("-") || "build";
+$("#build").onclick = async () => {
+  const task = $("#cprompt").value.trim();
+  if (!task) return toast("Type what to build in the box first");
+  const branch = prompt("Branch for the build (a new branch from origin/main, in its own folder):",
+                        data?.pair?.build?.branch || "claude/" + slug(task));
+  if (!branch) return;
+  try {
+    toast("Making the build folder…");
+    await api(`/api/pairs/${open.id}/build`, { task, branch: branch.trim(), files: cattached, rounds: +$("#crounds").value });
+    clearComposer(); await pollChats(true);
+  } catch (e) { toast(e.message); }
+};
 $("#collab").onclick = async () => {
   const task = $("#cprompt").value.trim();
   if (!task) return toast("Type the task in the box first");
@@ -406,6 +427,7 @@ function setView() {          // build the thread boxes for what's open: one thr
     v.append(sp);
   } else { const th = el("div", "thread"); th.id = "th-solo"; v.append(th); }
   $("#solobtns").hidden = isPair; $("#pairbtns").hidden = !isPair; $("#collabrow").hidden = !isPair; $("#collabhelp").hidden = !isPair;
+  $("#buildinfo").hidden = true;
   $("#cprompt").placeholder = isPair ? "Message one or both, or type a task and press Collaborate... (Ctrl+Enter sends to both)"
                                      : "Message... (Ctrl+Enter to send)";
 }
@@ -480,9 +502,11 @@ function drawOpen() {
       document.querySelector(`[data-to="${a}"]`).disabled = r || collab;
     }
     document.querySelector('[data-to="both"]').disabled = any || collab;
-    $("#collab").disabled = any || collab; $("#crounds").disabled = collab;
+    $("#collab").disabled = any || collab; $("#build").disabled = any || collab; $("#crounds").disabled = collab;
+    $("#buildinfo").hidden = !p.build;
+    if (p.build) $("#buildinfo").textContent = `Build folder: ${p.build.path} (branch ${p.build.branch})`;
     $("#pstop").hidden = !(any || collab);
-    $("#collabnote").textContent = col ? (collab ? `Collaborating: round ${col.round} of ${col.rounds}, ${NAMES[col.turn]}'s turn` : `Last collaboration: ${col.note}`) : "";
+    $("#collabnote").textContent = col ? (collab ? `${col.mode === "build" ? "Building" : "Collaborating"}: round ${col.round} of ${col.rounds}, ${NAMES[col.turn]}'s turn` : `Last ${col.mode === "build" ? "build" : "collaboration"}: ${col.note}`) : "";
   }
   stick = false;
 }

@@ -326,6 +326,25 @@ async def pair_collab(pid: str, m: Collab):
     PC.start_collab(p, m.task.strip(), m.files, max(1, min(10, m.rounds)))
     return {"ok": True}
 
+class Build(BaseModel):
+    task: str
+    branch: str
+    files: list[str] = []
+    rounds: int = 4
+
+@app.post("/api/pairs/{pid}/build")
+async def pair_build(pid: str, m: Build):
+    p = get_pair(pid)
+    if pid in PC.TASKS: raise HTTPException(409, "they're already working together")
+    if any(PC.chat(p, a)["status"] == "running" for a in ("claude", "codex")): raise HTTPException(409, "wait until both have finished")
+    if not m.task.strip(): raise HTTPException(400, "type what to build in the box first")
+    if not re.fullmatch(r"claude/[a-z0-9][a-z0-9._-]{1,60}", m.branch): raise HTTPException(400, "branch like claude/episode-13-six")
+    if p["title"] == "Claude + Codex": p["title"] = "Claude + Codex: " + m.task.strip().splitlines()[0][:50]
+    try: await asyncio.to_thread(PC.start_build_prepare, p, m.branch)
+    except Exception as ex: raise HTTPException(400, f"couldn't make the build folder: {ex}")
+    PC.start_build(p, m.task.strip(), m.files, max(1, min(10, m.rounds)), m.branch)
+    return {"ok": True, "path": p["build"]["path"]}
+
 @app.post("/api/pairs/{pid}/stop")
 async def pair_stop(pid: str):
     await PC.stop(get_pair(pid))

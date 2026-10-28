@@ -30,7 +30,7 @@ def find_codex():
 def short(cmd):
     """Codex wraps commands in `powershell.exe -Command "..."`: show only the inside."""
     m = re.match(r'^"?[^"]*powershell(\.exe)?"?\s+-Command\s+(["\'])(.*)\2\s*$', cmd or "", re.S | re.I)
-    return (m.group(3) if m else cmd or "").strip()
+    return (m.group(3).replace("\\\\", "\\") if m else cmd or "").strip()      # and un-double its backslashes
 
 def rel(p):
     return str(p).replace(str(ROOT) + "\\", "").replace(str(ROOT) + "/", "")
@@ -107,6 +107,8 @@ async def approve(chat, method, p):
         if CC.BLOCK.search(cmd):
             CC.add(chat, "error", text=f"Refused without asking: {cmd} (the desk never pushes, merges or posts)."); CC.save()
             return "decline"
+        if chat.get("auto") and not p.get("reason") and not p.get("networkApprovalContext") and not CC.ASK.search(cmd):
+            return "accept"                                        # building: runs inside the sandbox, no question
         acts = p.get("commandActions") or item.get("commandActions") or []
         if acts and all(a.get("type") in READ_ONLY for a in acts):
             return "accept"                                        # plain reads: like Claude, no question
@@ -114,6 +116,9 @@ async def approve(chat, method, p):
         what, detail = f"Running: {cmd}", f"{cmd}\n\nin {p.get('cwd') or ROOT}"
     else:
         changes = item.get("changes") or []
+        roots = [Path(chat.get("cwd") or ROOT).resolve(), (ROOT / "renders").resolve()]
+        if chat.get("auto") and changes and all(CC.inside(c["path"], roots) for c in changes):
+            return "accept"                                        # building: edits inside the build folder
         key = "Edit:" + ",".join(sorted(c["path"] for c in changes))
         what = "Editing " + ", ".join(rel(c["path"]) for c in changes) if changes else "Changing files"
         detail = "\n\n".join(f"{rel(c['path'])}\n{c.get('diff', '')}" for c in changes)[:4000]
@@ -158,7 +163,11 @@ def on_event(chat, method, p):
                 e.update(out="\n\n".join(c.get("diff", "") for c in item.get("changes") or [])[:3000],
                          ok=item.get("status") == "completed")
             else:
-                e.update(out=json.dumps(item.get("result") or item.get("action") or "")[:3000], ok=item.get("status") != "failed")
+                act = item.get("action") or {}
+                if kind == "webSearch":                          # the query is only known once it's done
+                    q = item.get("query") or "; ".join(act.get("queries") or []) or act.get("url") or ""
+                    e["what"] = ("Opening " if act.get("type") == "openPage" else "Searching the web: ") + q
+                e.update(out=json.dumps(item.get("result") or act or "")[:3000], ok=item.get("status") != "failed")
     elif method == "turn/completed":
         turn = p.get("turn") or {}
         if turn.get("status") == "failed":
@@ -184,14 +193,16 @@ async def turn(chat, prompt, files):
     try:
         await SERVER.ensure()
         tid = chat.get("session_id")
-        opts = dict(cwd=str(ROOT), approvalPolicy="untrusted", sandbox="workspace-write", developerInstructions=GUARD)
+        cwd = str(chat.get("cwd") or ROOT)
+        opts = dict(cwd=cwd, approvalPolicy="untrusted", sandbox="workspace-write", developerInstructions=GUARD + chat.get("guard_extra", ""))
         if tid and tid not in SERVER.loaded:
             try: await SERVER.call("thread/resume", dict(threadId=tid, **opts))
             except RuntimeError: tid = None                       # the old thread is gone: start over
         if not tid:
             tid = (await SERVER.call("thread/start", opts))["thread"]["id"]
         chat["session_id"] = tid; SERVER.loaded.add(tid); SERVER.threads[tid] = chat
-        r = await SERVER.call("turn/start", {"threadId": tid, "input": inp})
+        policy = {"type": "workspaceWrite", "networkAccess": False, "writableRoots": [cwd, str(ROOT / "renders")]}
+        r = await SERVER.call("turn/start", {"threadId": tid, "input": inp, "cwd": cwd, "sandboxPolicy": policy})
         t["id"] = r["turn"]["id"]
         await t["done"].wait()
         CC.add(chat, "done", seconds=round(time.time() - t0))

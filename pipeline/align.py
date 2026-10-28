@@ -19,13 +19,42 @@ def load16k(p):
     return np.interp(np.arange(n) * sr / 16000, np.arange(len(a)), a).astype(np.float32)
 
 NUM = {"1921": "nineteen twenty one", "3": "three"}
+
+# Only for episodes with ALIGN_SPELL_NUMBERS = True (from Experiment 12), so older timings stay as they were:
+# Whisper writes numbers as digits ("23", "50,617", "50.6%", "30th"); spell both sides out the same way.
+ONES = "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen " \
+       "seventeen eighteen nineteen".split()
+TENS = "_ _ twenty thirty forty fifty sixty seventy eighty ninety".split()
+def spell_int(n):
+    if n < 20: return ONES[n]
+    if n < 100: return TENS[n // 10] + ("" if n % 10 == 0 else " " + ONES[n % 10])
+    for size, name in ((10 ** 6, "million"), (1000, "thousand"), (100, "hundred")):
+        if n >= size:
+            return spell_int(n // size) + " " + name + ("" if n % size == 0 else " " + spell_int(n % size))
+ORD = {"one": "first", "two": "second", "three": "third", "five": "fifth", "eight": "eighth", "nine": "ninth",
+       "twelve": "twelfth"}
+def spell_number(m):
+    whole, frac, ordinal, pct = m.group(1).replace(",", ""), m.group(2), m.group(3), m.group(4)
+    s = spell_int(int(whole))
+    if frac: s += " point " + " ".join(ONES[int(d)] for d in frac[1:])
+    if ordinal:
+        *head, last = s.split()
+        last = ORD.get(last) or (last[:-1] + "ieth" if last.endswith("y") else last + "th")
+        s = " ".join(head + [last])
+    return " " + s + (" percent" if pct else "") + " "
+NUMBER = re.compile(r"(\d[\d,]*)(\.\d+)?(st|nd|rd|th)?(%)?")
+SPELL = False                       # set from the episode in main()
+
 def norm(w):
     w = w.lower().replace("ó", "o").replace("-", " ")
+    if SPELL: w = NUMBER.sub(spell_number, w)
     w = re.sub(r"[^a-z0-9' ]", "", w).strip("'")
     return NUM.get(w, w)
 
 def main():
+    global SPELL
     ep_path = Path(sys.argv[1]); ep = load_episode(ep_path)
+    SPELL = bool(getattr(ep, "ALIGN_SPELL_NUMBERS", False))
     d = ROOT / "renders" / ep_path.stem
     audio = d / (sys.argv[2] if len(sys.argv) > 2 else "narration_flow.wav")
     from faster_whisper import WhisperModel

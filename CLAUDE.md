@@ -19,7 +19,32 @@
   Railway). It's a library of methods to reuse here. Copy what's needed;
   don't import across repos.
 
-## Where we left off (26 Oct 2026, midday)
+## Where we left off (27 Oct 2026, ~15:20)
+- **Done for the day after Experiment 12** was posted (Dean: "we posted finish up"). **Posted 27 Oct 15:06**, public on
+  both: YouTube https://youtube.com/shorts/ygktb9u_cqY and Instagram https://www.instagram.com/reel/De_7TgIEmTI/
+  Branch `claude/episode-12-birthdays` pushed (no PR yet). Open: TikTok by hand.
+- **Stats 27 Oct ~15:15** (read-only via the studio's logins): YouTube took off from Experiment 8 (24 Oct): views
+  Ep1-7 6-13 each; Ep8 1,125, Ep9 1,524, Ep10 1,461, Ep11 1,365; channel 5,410 views, 8 subscribers. Experiment 9 is
+  public now. Instagram likes: Ep1 28, Ep2 53, Ep3 169, Ep4 189, Ep5 30, Ep6 22, Ep7 27, Ep8 30, Ep9 69, Ep10 21,
+  Ep11 52; 15 followers (views need `instagram_manage_insights`, not requested).
+  Read: the best (Ep3 sheep, Ep4 two farmers, Ep9 helpers) are a clear yes/no question with Daisy or helpers, and
+  two of them came from viewer comments. Weakest on Instagram: Ep10 chicken, Ep6 barns.
+- **Agenda (Dean, 27 Oct: "like 2 and 3 and 4"), talk again tomorrow; Dean picks the order:**
+  1. **Can a cow type MOO?** Random keys until it spells a word, counter racing up (a viewer's infinite-monkeys
+     joke on Experiment 2). Check every number by simulation first.
+  2. **The fastest slide** (brachistochrone): Joe races carts down a straight ramp and a curved one; the curve wins.
+  3. **A viewer's moves** (comment on Experiment 5): "first you go straight, the second right, the third backwards,
+     the last left": a 4-crop walking rule with straight and U-turns. Walking rule again, so not back to back with Ep11.
+  Not picked: Daisy vs a bird (3D random walk), parked.
+- **Experiment 12: birthday cows** (the birthday paradox), branch `claude/episode-12-birthdays` from `origin/main`.
+  Codex reviews via `docs/ep12_review.md` (read it). Sim `pipeline/birthdays.py` (seed 12), script `episodes/ep12_birthdays.py`
+  (Codex's shorter version, voiced in george, 32.4 s), `pipeline/ep12_timeline.py`, `blender/render_ep12.py`,
+  `pipeline/compose_ep12.py`. Half-size draft sent to Dean; he said "Do it" (full render).
+- **Full render done 27 Oct 15:05** (`renders/ep12_birthdays/ep12_birthdays.mp4`, 36.6 s, 37 MB), after Codex's overlay
+  fixes (card wording, pair-shot tags). Studio started for Dean to post (Dean: "start the studio... i can post from there").
+  Lesson: Codex and Claude share `docs/ep12_review.md` as the handoff; Claude owns renders.
+
+## Earlier (26 Oct 2026, midday)
 - **Done for the day after Experiments 10 and 11** were posted (Dean: "wrap up for today"). Open: TikTok for 9-11
   by hand; Experiment 9's YouTube Short was private (check it's public); Instagram numbers for 9-11 vs Experiment 8.
   Next: Experiment 12, Dean's pick; NOT the walking rule again (birthday cows is next in line; also the living

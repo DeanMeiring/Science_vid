@@ -90,6 +90,38 @@ and Instagram. It only runs on this laptop; logins are kept in `.tokens/`
 3. Put `INSTAGRAM_APP_ID=...` and `INSTAGRAM_APP_SECRET=...` in `.env`
    (optional: `INSTAGRAM_FB_CONFIG_ID=...`).
 
+## Agent desk: ask Claude and Codex
+
+```
+.venv/Scripts/python desk/app.py          # then open http://localhost:8770
+```
+
+One page on this laptop to ask Claude Code, Codex or both the same question (with files attached), and a
+"You two talk to each other" button: they take turns on a topic, reading the conversation so far, and stop
+when they agree. It drives the `claude` and `codex` command-line tools you're already logged in to (no extra
+cost). Read-only unless "Allow file edits" is ticked; it never pushes, merges or posts. It only listens on
+127.0.0.1: never put it on the internet. Uploads and history stay in `desk/` (gitignored).
+
+The **Chats** tab works like Claude Code itself: live chats with Claude or Codex that remember the
+conversation and show every step. Before changing a file or running a command that isn't a plain read, the
+page asks with Allow once / Allow in this chat / Deny. Push, merge and post commands are refused whatever is
+clicked. Claude runs through the Claude Agent SDK (`desk/claude_chat.py`), Codex through `codex app-server`
+(`desk/codex_chat.py`, in its workspace-write sandbox: writes only inside the repo, no network).
+**Start Claude + Codex** opens both side by side: send a message to one or both, or type a task and press
+**Collaborate for N rounds**. They take turns (Claude first), each getting the other's last reply, and stop
+early when both start a reply with AGREED (`desk/pair_chat.py`). Every change still asks first.
+**Build together for N rounds** does the same but builds it: in its own copy of the repo
+(`../Science_vid_builds/<name>`, a git worktree on a new `claude/<name>` branch from `origin/main`), so the main
+folder never changes branch. `.venv`, `renders/` and the third-party assets are linked in, not copied. Claude and
+Codex split the work at the start of each phase (a task list with owners) and hand problems to each other (STUCK:).
+They build in phases (for an episode: facts and sim, script, voice, style sample, half-size draft, full render) and
+stop after each with PHASE READY: the page shows a "Phase ready for you" card and an **Outputs** panel that
+previews what the build made (images, voice, video, scripts). Press Continue, with notes for changes, to go on.
+Edits and test runs inside the build folder don't ask; Blender,
+installs, deletes, the network and anything outside the folder still do. Nobody pushes from the desk.
+To delete a build folder, remove the links first (`rmdir .venv renders assets\thirdparty` inside it), then
+`git worktree remove` it, so nothing can reach the shared folders.
+
 ## Run the prototypes
 
 ```

@@ -22,3 +22,9 @@ venv/
 
 # third-party 3D assets (Kenney CC0, Quaternius: licence forbids redistributing): never committed
 assets/thirdparty/
+# agent desk: uploads and the Q&A history stay on this laptop
+desk/uploads/
+desk/history.jsonl
+desk/.codex_*.txt
+desk/chats.json
+desk/pairs.json

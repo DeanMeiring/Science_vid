@@ -252,6 +252,7 @@ async def collaborate(p, task, files, rounds, build=None, resume=None):
     t = 0; total = 0                     # turns in this phase, turns in all
     note = {}                            # agent -> Dean's review notes it hasn't seen yet
     solo_msg = "\0"                      # what the one carrying on alone was told (dropped if it never went)
+    side = None; side_for = None          # the other's side turn while one runs a long command (once per turn)
     handed = False                       # fresh sessions after a phase: the first two turns get a handover briefing
     if resume is not None:
         replies = {a: last_turn(chat(p, a))[0] for a in ("claude", "codex")}; total = 2
@@ -297,7 +298,13 @@ async def collaborate(p, task, files, rounds, build=None, resume=None):
                            "sum up where it stands for Dean.")
             c = chat(p, agent)
             while c["status"] == "running": await asyncio.sleep(1)      # Dean messaged it by hand: wait
-            await MOD[agent].turn(c, prompt, files if total < 2 and not handed else [])
+            job = asyncio.create_task(MOD[agent].turn(c, prompt, files if total < 2 and not handed else []))
+            while not job.done():                     # while it's busy with a long command, the other works alongside
+                await asyncio.wait({job}, timeout=POLL)
+                busy = long_step(c)
+                if busy and building and not solo and not col.get("away") and (side is None or side.done())                         and side_for != id(job) and chat(p, other)["status"] == "idle":
+                    side = asyncio.create_task(side_turn(p, col, other, agent, busy)); side_for = id(job)
+            await job
             replies[agent], last, stopped = last_turn(c); lasts[agent] = last
             total += 1; t += 2 if solo else 1          # alone, each turn is a whole round
             hit = limit_hit(c)
@@ -337,6 +344,7 @@ async def collaborate(p, task, files, rounds, build=None, resume=None):
             if not building and t >= 2 * rounds:
                 col.update(state="done", note=f"Finished {rounds} round{'s' if rounds > 1 else ''}"); return
     except asyncio.CancelledError:
+        if side and not side.done(): side.cancel()
         col.update(state="stopped", note="Stopped by Dean"); raise
     finally:
         f = REVIEWS.pop(p["id"], None)
@@ -344,6 +352,34 @@ async def collaborate(p, task, files, rounds, build=None, resume=None):
         for a in ("claude", "codex"):
             if chat(p, a): chat(p, a)["auto"] = False
         TASKS.pop(p["id"], None); CC.save(); save()
+
+LONG = 90                                # seconds a single command runs before the other gets a side turn
+POLL = 5                                 # how often (seconds) to look whether it is busy with one
+
+def long_step(c):
+    """The command an agent has been running for over LONG seconds (a render, a long sim), or None."""
+    if c["status"] != "running": return None
+    for e in reversed(c["events"][-4:]):
+        if e["type"] == "tool" and e.get("out") is None and time.time() - e["t"] > LONG: return e["what"]
+    return None
+
+async def side_turn(p, col, me, busy_agent, what):
+    """A turn for `me` alongside the other's long command: its own tasks, on other files, never a render."""
+    c = chat(p, me); c["_side"] = True; col["side"] = me; save()
+    prompt = (balance_note(p) + "\n\n" + f"SIDE TURN: {NAME[busy_agent]} is busy with a long command, so you don't "
+              f"have to wait for it: {what[:300]}\n\nWhile it runs, do your own open tasks from the task list, or "
+              "useful prep for what comes next (checks, the next script or step). Rules for a side turn: work only on "
+              f"files {NAME[busy_agent]} isn't changing; don't start Blender or any render (one at a time on this "
+              "laptop); no git commits. Keep it short and say what you did: it's passed on in your next turn.")
+    if not c.get("session_id"):                    # a fresh session that hasn't had a turn yet: brief it first
+        prompt = (f"You ({NAME[me]}) and {NAME[busy_agent]} are building this for Dean, taking turns:\n\n{col['task']}"
+                  f"\n\n{handover_text(col)}\n\n" + prompt)
+    try:
+        await MOD[me].turn(c, prompt, [])
+    except Exception:
+        pass
+    finally:
+        c["_side"] = False; col.pop("side", None); save()
 
 def col_other(agent):
     return "codex" if agent == "claude" else "claude"

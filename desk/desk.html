@@ -647,7 +647,7 @@ function drawOpen() {
         + (rn.per ? ` · ${rn.per.toFixed(1)} s/frame` : "")
         + (rn.left != null ? ` · about ${mins(rn.left)} left (done ~${at})` : " · time left unknown until the total is known");
     }
-    $("#collabnote").textContent = col ? (collab ? (inReview ? "Waiting for you: a phase is ready" : col.solo ? `Building: ${col.note}` : `${col.mode === "build" ? "Building" : "Collaborating"}: round ${col.round} of ${col.rounds}${col.mode === "build" ? " in this phase" : ""}, ${NAMES[col.turn]}'s turn`) : `Last ${col.mode === "build" ? "build" : "collaboration"}: ${col.note}`) : "";
+    $("#collabnote").textContent = col ? (collab ? (inReview ? "Waiting for you: a phase is ready" : col.side ? `Building: ${NAMES[col.turn]} is busy with a long job, ${NAMES[col.side]} is working alongside` : col.solo ? `Building: ${col.note}` : `${col.mode === "build" ? "Building" : "Collaborating"}: round ${col.round} of ${col.rounds}${col.mode === "build" ? " in this phase" : ""}, ${NAMES[col.turn]}'s turn`) : `Last ${col.mode === "build" ? "build" : "collaboration"}: ${col.note}`) : "";
   }
   stick = false;
 }

@@ -131,6 +131,9 @@ async def approve(chat, method, p):
         if CC.BLOCK.search(cmd):
             CC.add(chat, "error", text=f"Refused without asking: {cmd} (the desk never pushes, merges or posts)."); CC.save()
             return "decline"
+        if chat.get("_side") and CC.SIDE_NO.search(cmd):
+            CC.add(chat, "error", text=f"Refused in a side turn: {cmd} (one render at a time on this laptop)."); CC.save()
+            return "decline"
         if chat.get("auto") and not p.get("reason") and not p.get("networkApprovalContext") and not CC.ASK.search(cmd):
             return "accept"                                        # building: runs inside the sandbox, no question
         acts = p.get("commandActions") or item.get("commandActions") or []

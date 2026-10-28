@@ -130,6 +130,10 @@ leaves the commits and renders for Claude) and hands back when the limit resets;
 build pause, instead of passing turns back and forth. **Carry on the build** picks a stopped or paused build up again in the same folder and branch,
 with what you type in the box as notes. When a build has made a video, **Open the posting studio** starts the
 studio (if it isn't running) with the builds' episodes listed too, so you can post one before it's merged.
+When one of them runs a long command (over 90 s: a render, a long sim), the other gets a side turn alongside it on
+its own tasks, on other files, with no commits and never a second render (that is refused).
+While Blender renders for a build, the page shows how far it is and how long is left (frames saved so far, seconds
+per frame, the finish time), counted over the whole video even when the render runs in batches.
 To delete a build folder, remove the links first (`rmdir .venv renders assets\thirdparty` inside it), then
 `git worktree remove` it, so nothing can reach the shared folders.
 

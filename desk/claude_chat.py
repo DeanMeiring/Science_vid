@@ -33,6 +33,7 @@ SHELL = ("Bash", "PowerShell")
 ASK = re.compile(r"blender|render_\w*\.py|\b(pip|uv|npm|npx|winget|choco)\b|\b(curl|wget|Invoke-WebRequest|Invoke-RestMethod|iwr|irm)\b|"
                  r"\brm\s+-\w*r|Remove-Item\b.*-Recurse|\brmdir\b|\bdel\s+/s|\bgit\s+(reset\s+--hard|clean|checkout\s+--|restore|"
                  r"branch\s+-D|rebase|worktree|(checkout|switch)\s+(?!-b\b|-c\b)|stash\s+(drop|clear))|Science_vid(?!_builds)[\\/](?!\.venv[\\/])|\bshutdown\b|Stop-Process|taskkill", re.I)
+SIDE_NO = re.compile(r"blender|render_\w*\.py", re.I)      # a side turn never starts a second render
 EDIT = ("Write", "Edit", "MultiEdit", "NotebookEdit")
 FREE = ("Read", "Glob", "Grep", "WebFetch", "WebSearch", "TodoWrite", "Task", "Agent", "LS")
 
@@ -129,6 +130,9 @@ def make_permission(chat):
     async def can_use(name, inp, ctx):
         if name in SHELL and BLOCK.search(str(inp.get("command", ""))):
             return PermissionResultDeny(message="The agent desk never pushes, merges or posts. Ask Dean to do it.")
+        if chat.get("_side") and name in SHELL and SIDE_NO.search(str(inp.get("command", ""))):
+            return PermissionResultDeny(message="The other agent is busy with a long job (maybe a render): don't start "
+                                                "Blender or a render in a side turn. One render at a time on this laptop.")
         if chat.get("auto") and auto_ok(chat, name, inp):
             return PermissionResultAllow()
         key = always_key(name, inp)

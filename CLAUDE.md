@@ -19,6 +19,29 @@
   Railway). It's a library of methods to reuse here. Copy what's needed;
   don't import across repos.
 
+## Where we left off (end of 21 Oct 2026)
+- **Posted:** Experiments 1 and 2 on YouTube and Instagram. Dean posted
+  Experiment 2's Reel from his phone (the API failed because it's over
+  ~50 s): https://www.instagram.com/reel/DexWGACAEWc/
+- **Stats on 22 Oct:** Instagram 17 and 20 likes, 3 followers. YouTube only
+  3 views each so far (a new channel; normal at first).
+- **GitHub:** PR #3 (`claude/voice-cartoon` → `main`, all the pipeline
+  work) is open and waits for Dean to merge it (Claude Code blocks Claude
+  from merging). `claude/episode-2` is stacked on top of it; its PR is #4.
+- **Next: Experiment 3, the lost sheep** (facts checked, below). Dean said
+  "not yet": start when he asks. Plan:
+  1. script under ~50 s that opens on action;
+  2. voice it in george, as whole flowing paragraphs, and let Dean hear the
+     voice-over on its own first;
+  3. then style samples for the "more amateur, personal" look;
+  4. then animate to follow the voice (Whisper word timings), and render.
+- **Ideas queue:** four crops / crop circle (LLRR), Monty Hall barns,
+  golden-angle sunflowers. A viewer comment on Experiment 1's Reel: "two
+  farmers … after ~12,000 steps both end up where they started and all the
+  dirt is grass". Check by simulation; a possible episode crediting them.
+- Instagram insights (views, reach) need the `instagram_manage_insights`
+  permission; not requested yet.
+
 ## Format Dean asked for
 - **The narrator explains while it runs:** zoomed in on the grid while
   the rules are explained ("put an ant on a grid of white squares… on white
@@ -127,6 +150,14 @@
   - YouTube: the **Farmer Joe** channel (`@farmer-joe-1111`, id
     UCW4elsuFZaMRHhMRq6hKGZA). It showed as "Caught On Code" at first: that
     was the same channel under its old name.
+- **Instagram upload limit (found 21 Oct 2026):** through the API, Reels up
+  to ~50 s upload; 55 s and longer fail with "ProcessingFailedError /
+  Request processing failed" (size isn't the cause: 23 MB at 63 s fails,
+  27 MB at 45 s works). Undocumented, measured by test uploads with
+  `publish_reel(..., publish=False)`, which never posts. Longer videos: post
+  from the phone app, or keep episodes under ~50 s.
+- **Episode 2 posted to YouTube 21 Oct 2026, 21:45**
+  (https://youtube.com/shorts/OyYem3ntT3Y). Instagram failed (too long).
 - **Episode 1 posted 21 Oct 2026, 15:45**, public on both, via "Post to
   both": YouTube https://youtube.com/shorts/z1UEqgtLkpM and Instagram
   https://www.instagram.com/reel/Dewi-t-ErwB/. Next: Episode 2, "what
@@ -134,21 +165,41 @@
   simulation first), and give the video Joe the profile picture's face
   (eyes, cheeks, moustache).
 
+- **Episode 2 (Oct 2026):** Joe narrates himself (first person), plants
+  wheat (rule RLR, no highway in 2M simulated steps; Wikipedia says it's
+  unknown whether RLR ever builds one), trips near the end (`trip` mode),
+  and the conclusion zooms out over one farm with Episode 1's field rising
+  beyond today's, each labelled. Dean liked the trip gag and the bald head
+  under the hat.
+- **Series plan (Dean, Oct 2026):** Joe runs a *different* experiment each
+  episode on his farm (not 8 ant episodes). Order: Experiment 3 lost sheep
+  (random walk), then four crops / crop circle (LLRR, check symmetry first),
+  Monty Hall barns, golden-angle sunflowers. Episode 2's last line teases
+  the sheep.
+- **Experiment 3 facts (checked):** Pólya (1921): a random walk on a flat
+  grid returns home with probability 1; in 3D only about 34% (Wikipedia,
+  "Random walk", citing MathWorld). Kakutani: "A drunk man will find his
+  way home, but a drunk bird may get lost forever" (via Durrett,
+  *Probability: Theory and Examples*). Our sim, 2,000 walkers × 200,000
+  steps: 2D 80% home and still rising; 3D 36% and flat. Not checked yet:
+  anything about *how long* it takes on average (don't claim it).
+- **Pacing (Dean, after Episode 2):** it "takes too long to start and speed
+  up" and "the voice over did not flow". From Experiment 3: open on action in
+  the first 1-2 s, rules in 1-2 quick lines, speeding up by ~6-8 s; voice
+  whole paragraphs in one go (no per-line gaps or MIN_DUR padding) and
+  drive sim cues and captions from Whisper word timings; aim for < 50 s.
+- **From Experiment 3, Dean wants to try a more amateur, personal feel.**
+  The polished look is "very good", but he wants it less slick. Try a few
+  different setups and show samples before committing.
+
 ## Voice
-- **Farmer Joe's voice (from Episode 2, Oct 2026): a blend of Kokoro
-  `am_michael` 55% + `am_santa` 45%** (`FARMER_JOE` in `pipeline/tts.py`).
-  Dean first had 68/32, then asked for "santa a bit more, 55/45".
-  - Dean picked it after hearing deep natural male voices; he liked michael,
-    santa and Pocket bill_boerst, and asked for a mix ("michael 75 santa
-    35", read as about 68/32). Sample: `renders/voice_samples/FARMER_JOE_55_45.wav`.
-  - Pitch-shifted "cartoon" voices sounded weird to him (the tool was
-    removed). Keep voices natural.
-  - A real Texan accent isn't available free. Options he was given: a
-    consenting person with a Southern accent records 30 s for a Pocket
-    clone, a paid service (needs his OK), or his own voice clone.
-  - Kokoro is Apache-2.0. Credit line: `credit` in `timing.json`
-    ("Narration voice: Kokoro TTS (Apache-2.0)."). Episode 1 stays on
-    `pocket:george` (its `VOICE`), as posted.
+- **Farmer Joe's voice: Pocket TTS `george` again (from Experiment 3).**
+  Episode 2 used a Kokoro blend (michael 55% + santa 45%); Dean didn't like
+  it after hearing it in the finished video ("rather go back to the
+  original used in experiment one"). Episode 2 stays as posted, pinned with
+  `VOICE` in its episode file. Remember the CC-BY credit line for george in
+  every description. Keep voices natural: pitch-shifted "cartoon" voices
+  sounded weird to him.
 - **Episode 1's voice: Kyutai Pocket TTS preset `george`.** Dean's
   friend wasn't available, and Dean has no good mic, so he picked from 8
   free voices (`voice/samples.py`, Kokoro + Pocket presets).

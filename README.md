@@ -119,6 +119,10 @@ stop after each with PHASE READY: the page shows a "Phase ready for you" card an
 previews what the build made (images, voice, video, scripts). Press Continue, with notes for changes, to go on.
 Edits and test runs inside the build folder don't ask; Blender,
 installs, deletes, the network and anything outside the folder still do. Nobody pushes from the desk.
+If either one hits its usage limit, the build pauses (the note says when it resets) instead of passing turns
+back and forth. **Carry on the build** picks a stopped or paused build up again in the same folder and branch,
+with what you type in the box as notes. When a build has made a video, **Open the posting studio** starts the
+studio (if it isn't running) with the builds' episodes listed too, so you can post one before it's merged.
 To delete a build folder, remove the links first (`rmdir .venv renders assets\thirdparty` inside it), then
 `git worktree remove` it, so nothing can reach the shared folders.
 

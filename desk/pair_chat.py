@@ -30,7 +30,7 @@ def load():
     if STORE.exists():
         try:
             for p in json.loads(STORE.read_text(encoding="utf-8")):
-                if p.get("collab") and p["collab"]["state"] == "running":      # a review that was waiting still is
+                if p.get("collab") and p["collab"]["state"] == "running":      # a review or a pause that was waiting still is
                     p["collab"]["state"] = "stopped"; p["collab"]["note"] = "the desk restarted"
                 PAIRS[p["id"]] = p
         except ValueError:
@@ -65,6 +65,17 @@ def last_turn(c):
     if changed: out += "\n\n[Files changed this turn: " + "; ".join(changed) + "]"
     stopped = any(e["type"] == "error" for e in ev[start + 1:])
     return out[:MAX_REPLY], (texts[-1] if texts else ""), stopped
+
+LIMIT = re.compile(r"(?i)hit your .{0,40}limit|usage limit|rate limit (reached|exceeded)|out of (extra )?usage|"
+                   r"limit reached|quota exceeded")
+
+def limit_hit(c):
+    """If the agent's last turn ran into its usage limit: its short message (e.g. "...limit · resets 12:30pm")."""
+    ev = c["events"]; start = max((i for i, e in enumerate(ev) if e["type"] == "user"), default=-1)
+    for e in ev[start + 1:]:
+        t = (e.get("text") or "").strip()
+        if e["type"] in ("text", "error") and len(t) < 600 and LIMIT.search(t): return t
+    return None
 
 def last_reply(c):
     out, _, stopped = last_turn(c)
@@ -125,6 +136,12 @@ def after_review(col, name, decision):
     """Dean answered a PHASE READY: the notes each agent gets next, or None if he ended the build."""
     if decision["action"] == "stop":
         col.update(state="done", note=f"Dean ended the build after: {name}"); return None
+    if decision["action"] == "carry":                  # picking up a build that stopped or paused mid-phase
+        said = decision.get("notes") or "Carry on where you left off."
+        head = f"Dean is picking the build back up. It had stopped ({col.get('note') or 'stopped'}).\n\n{said}\n\n"
+        col.update(state="running", phase=None, outputs=[], note="")
+        return {"claude": head + "Look at where the current phase stands (git status, the files, the other's last "
+                                 "reply) and carry on with it.", "codex": head.strip()}
     col["phases_done"].append(name)
     said = decision.get("notes") or "Looks good. Go on to the next phase."
     head = f"Dean reviewed \"{name}\" and said:\n\n{said}\n\n"
@@ -134,7 +151,8 @@ def after_review(col, name, decision):
 
 async def collaborate(p, task, files, rounds, build=None, resume=None):
     """build=None: talk it through. build=str (earlier agreement, may be empty): build it in phases.
-    resume={action, notes}: carry on a build whose review was answered after the desk restarted."""
+    resume={action, notes}: carry on a build whose review was answered after the desk restarted,
+    or (action "carry") one that stopped or paused mid-phase."""
     building = build is not None or resume is not None
     if resume is None:
         col = p["collab"] = dict(task=task, rounds=rounds, round=1, turn="claude", state="running", note="",
@@ -148,6 +166,7 @@ async def collaborate(p, task, files, rounds, build=None, resume=None):
     note = {}                            # agent -> Dean's review notes it hasn't seen yet
     if resume is not None:
         replies = {a: last_turn(chat(p, a))[0] for a in ("claude", "codex")}; total = 2
+        if resume.get("rounds"): col["rounds"] = rounds = resume["rounds"]
         note = after_review(col, col.get("phase") or "the last phase", resume)
         if note is None: save(); return
     try:
@@ -174,6 +193,9 @@ async def collaborate(p, task, files, rounds, build=None, resume=None):
             await MOD[agent].turn(c, prompt, files if total < 2 else [])
             replies[agent], last, stopped = last_turn(c); lasts[agent] = last
             total += 1; t += 1
+            hit = limit_hit(c)
+            if hit:                                   # don't hand a turn back and forth while one of them can't work
+                col.update(state="paused", note=f"{NAME[agent]} hit its usage limit: {hit[:160]}"); return
             if stopped:
                 col.update(state="stopped", note=f"{NAME[agent]}'s turn stopped or failed"); return
             if starts(last, "AGREED") and starts(lasts[other], "AGREED"):        # both said so, one after the other
@@ -365,6 +387,17 @@ def resolve_output(p, path):
     f = Path(path)
     if not f.is_absolute() and p.get("build"): f = Path(p["build"]["path"]) / f
     return f.resolve()
+
+def carry_on(p, notes, rounds):
+    """Pick a stopped or paused build back up in its own folder, on its own branch (no new folder)."""
+    col = p.get("collab") or {}
+    if p["id"] in TASKS: return "they're already working"
+    if not p.get("build") or col.get("mode") != "build": return "there's no build to carry on"
+    if col.get("state") == "review": return "a phase is waiting for your review: use Continue on its card"
+    if not Path(p["build"]["path"]).is_dir(): return "the build folder is gone"
+    TASKS[p["id"]] = asyncio.create_task(collaborate(p, col["task"], [], rounds, resume={
+        "action": "carry", "notes": notes.strip(), "rounds": rounds}))
+    return None
 
 async def stop(p):
     review(p, "stop", "")

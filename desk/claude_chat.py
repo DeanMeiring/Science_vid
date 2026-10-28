@@ -11,12 +11,14 @@ import asyncio, json, re, shutil, time, uuid
 from pathlib import Path
 
 from claude_agent_sdk import (AssistantMessage, ClaudeAgentOptions, ClaudeSDKClient, HookMatcher, PermissionResultAllow,
-                              PermissionResultDeny, ResultMessage, StreamEvent, SystemMessage, TextBlock, ToolResultBlock,
-                              ToolUseBlock, UserMessage)
+                              PermissionResultDeny, RateLimitEvent, ResultMessage, StreamEvent, SystemMessage, TextBlock,
+                              ToolResultBlock, ToolUseBlock, UserMessage)
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 STORE = HERE / "chats.json"
+LIMITS_FILE = HERE / "limits.json"
+MODELS = ("opus", "sonnet", "haiku")  # what the page can pick for a Claude chat (None = Claude Code's default)
 WAIT = 30 * 60                       # seconds a permission question waits before it counts as "deny"
 GUARD = ("You are running inside Dean's local 'agent desk' web page, in the Science_vid repo. Follow CLAUDE.md. "
          "Never push, merge, post or publish anything: if that's needed, tell Dean to do it himself. Dean answers "
@@ -61,6 +63,24 @@ def load():
         except ValueError:
             pass
 load()
+
+# How much of each one's usage limit is used, as both report it: {agent: {window: {used: %, resets: unix time}}}
+LIMITS = {"claude": {}, "codex": {}}
+try: LIMITS.update(json.loads(LIMITS_FILE.read_text(encoding="utf-8")))
+except (OSError, ValueError): pass
+
+def note_limit(agent, window, used=None, resets=None, status=None):
+    w = LIMITS[agent].setdefault(window, {})
+    if used is not None: w["used"] = round(float(used), 1)
+    if resets: w["resets"] = int(resets)
+    if status: w["status"] = status
+    w["at"] = time.time()
+    LIMITS_FILE.write_text(json.dumps(LIMITS), encoding="utf-8")
+
+def add_tokens(chat, read, wrote):
+    """Count what a turn cost: tokens read (incl. cached context, re-read every step) and written."""
+    t = chat.setdefault("tokens", {"read": 0, "wrote": 0})
+    t["read"] += int(read or 0); t["wrote"] += int(wrote or 0)
 
 def save():
     keep = [{k: v for k, v in c.items() if not k.startswith("_")} for c in CHATS.values()]   # "_turn" is live state
@@ -144,6 +164,7 @@ async def turn(chat, prompt, files):
     if files: full += "\n\nFiles I attached (read them as needed): " + ", ".join(f"desk/uploads/{f}" for f in files)
     opts = ClaudeAgentOptions(
         cwd=str(chat.get("cwd") or ROOT), cli_path=shutil.which("claude"), permission_mode="default", resume=chat["session_id"],
+        model=chat.get("model"),
         can_use_tool=make_permission(chat), setting_sources=["user", "project", "local"],
         system_prompt={"type": "preset", "preset": "claude_code", "append": GUARD + chat.get("guard_extra", "")},
         hooks={"PreToolUse": [HookMatcher(matcher=None, hooks=[guard_hook])]}, include_partial_messages=True)
@@ -164,6 +185,11 @@ async def turn(chat, prompt, files):
                     if ev.get("type") == "content_block_delta" and (ev.get("delta") or {}).get("type") == "text_delta":
                         chat["_live"] = chat.get("_live", "") + ev["delta"].get("text", "")
                     continue
+                if isinstance(m, RateLimitEvent):           # how close to the usage limit (sent when it changes)
+                    i = m.rate_limit_info
+                    note_limit("claude", i.rate_limit_type or "five_hour",
+                               None if i.utilization is None else i.utilization * 100, i.resets_at, i.status)
+                    continue
                 if isinstance(m, SystemMessage) and m.subtype == "init":
                     chat["session_id"] = (getattr(m, "data", None) or {}).get("session_id") or chat["session_id"]
                 elif isinstance(m, AssistantMessage):
@@ -178,6 +204,9 @@ async def turn(chat, prompt, files):
                             tools[b.tool_use_id].update(out=c[:3000], ok=not b.is_error)
                 elif isinstance(m, ResultMessage):
                     chat["session_id"] = m.session_id or chat["session_id"]
+                    u = m.usage or {}
+                    add_tokens(chat, sum(u.get(k) or 0 for k in ("input_tokens", "cache_read_input_tokens",
+                                                                 "cache_creation_input_tokens")), u.get("output_tokens"))
                     stopped = chat["events"][-1].get("text") == "Stopped by Dean."
                     if m.is_error and m.subtype != "success" and not stopped: add(chat, "error", text=m.result or m.subtype)
                     if not chat["_steered"] or stopped: save(); break

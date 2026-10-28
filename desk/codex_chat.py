@@ -53,6 +53,8 @@ class Server:
             asyncio.create_task(self.read(self.proc))
             await self.call("initialize", {"clientInfo": {"name": "agent_desk", "title": "Agent Desk", "version": "0.1"}})
             self.send({"method": "initialized"})
+            try: rate_limits((await self.call("account/rateLimits/read", None)).get("rateLimits"))
+            except Exception: pass                                 # an older Codex: the numbers come with each turn
 
     def send(self, msg):
         self.proc.stdin.write((json.dumps({"jsonrpc": "2.0", **msg}) + "\n").encode())
@@ -75,6 +77,10 @@ class Server:
                 continue
             p = m.get("params") or {}
             chat = self.threads.get(p.get("threadId"))
+            if m["method"] == "account/rateLimits/updated": rate_limits(p.get("rateLimits")); continue
+            if m["method"] == "thread/tokenUsage/updated":
+                if chat: tokens(chat, p.get("threadId"), (p.get("tokenUsage") or {}).get("total") or {})
+                continue
             if "id" in m:                                          # Codex asks us something
                 asyncio.create_task(self.request(chat, m["id"], m["method"], p))
             elif chat:
@@ -98,6 +104,23 @@ class Server:
             pass
 
 SERVER = Server()
+
+def rate_limits(snap):
+    """Codex's plan limits: primary (the 5-hour window) and secondary (the weekly one), each a % used."""
+    for w in ("primary", "secondary"):
+        x = (snap or {}).get(w)
+        if not x: continue
+        mins = x.get("windowDurationMins") or (300 if w == "primary" else 10080)
+        name = {300: "five_hour", 10080: "seven_day"}.get(mins, f"{mins}_min")
+        CC.note_limit("codex", name, x.get("usedPercent"), x.get("resetsAt"),
+                      "rejected" if (snap.get("rateLimitReachedType") and (x.get("usedPercent") or 0) >= 100) else None)
+
+def tokens(chat, tid, total):
+    """Codex reports each thread's running total: add what's new since the last report."""
+    seen = chat.setdefault("cx_seen", {}).get(tid) or [0, 0]
+    now = [total.get("inputTokens") or 0, total.get("outputTokens") or 0]
+    CC.add_tokens(chat, max(0, now[0] - seen[0]), max(0, now[1] - seen[1]))
+    chat["cx_seen"][tid] = now
 
 async def approve(chat, method, p):
     t = chat.get("_turn") or {}

@@ -4,8 +4,10 @@ screen. Dean can message one or both, or:
 - "Collaborate for N rounds": they take turns on his task, each turn getting the other's last reply, until both
   start a reply with AGREED: or the rounds run out.
 - "Build together": the same, but they build it, in its own git worktree on a new branch, in phases. At the start
-  of each phase they split the work between them (a task list with owners); when one gets stuck it hands the
-  problem to the other (STUCK:) and they solve it together. When a phase is done they stop with PHASE READY: and
+  of each phase they split the work between them (a task list with owners), as evenly as they can: every turn
+  each sees how much of both their usage limits is used, so neither runs out long before the other. When one
+  gets stuck it hands the problem to the other (STUCK:) and they solve it together. When one hits its usage
+  limit, the other carries on alone until it's back. When a phase is done they stop with PHASE READY: and
   the files Dean should look at; the page shows them, and nothing goes on until Dean presses Continue (with notes).
 
 Both chats are ordinary desk chats (claude_chat.py / codex_chat.py): while building, edits and test runs inside
@@ -77,6 +79,57 @@ def limit_hit(c):
         if e["type"] in ("text", "error") and len(t) < 600 and LIMIT.search(t): return t
     return None
 
+RESETS = re.compile(r"(?i)resets?\s+(?:at\s+)?(\d{1,2})(?::(\d\d))?\s*([ap]m)?")
+
+def back_at(agent, msg):
+    """When an agent that hit its limit can work again (unix time), from what it reported, or None."""
+    now = time.time()
+    hit = [w.get("resets") for w in CC.LIMITS[agent].values()
+           if w.get("resets") and w["resets"] > now and (w.get("status") == "rejected" or (w.get("used") or 0) >= 99)]
+    if hit: return max(hit)
+    m = RESETS.search(msg or "")                          # "...limit · resets 12:30pm (Africa/Johannesburg)"
+    if not m: return None
+    h, mi = int(m.group(1)) % 12 if m.group(3) else int(m.group(1)), int(m.group(2) or 0)
+    if (m.group(3) or "").lower() == "pm": h += 12
+    lt = time.localtime(now)
+    at = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, h, mi, 0, 0, 0, -1))
+    return at + 86400 if at <= now else at
+
+# ---------------- keeping the load even ----------------
+WINDOW = {"five_hour": "5-hour", "seven_day": "weekly", "seven_day_opus": "weekly Opus", "seven_day_sonnet": "weekly Sonnet"}
+
+def usage(p):
+    """Each agent's usage right now: % of its fullest limit window (if it reported one) and this pair's tokens."""
+    now = time.time(); out = {}
+    for a in ("claude", "codex"):
+        wins = [(n, w) for n, w in CC.LIMITS[a].items() if w.get("used") is not None and (w.get("resets") or now + 1) > now]
+        n, w = max(wins, key=lambda x: x[1]["used"]) if wins else (None, {})
+        tok = (chat(p, a) or {}).get("tokens") or {}
+        out[a] = dict(pct=w.get("used"), window=n, resets=w.get("resets"), read=tok.get("read", 0), wrote=tok.get("wrote", 0))
+    return out
+
+def kilo(n):
+    return f"{n / 1e6:.1f}M" if n >= 1e6 else f"{round(n / 1e3)}k"
+
+def balance_note(p):
+    """A short paragraph for each build turn: both usage numbers, and who should take the next heavy task."""
+    u = usage(p); parts = []
+    for a in ("claude", "codex"):
+        x = u[a]; bits = []
+        if x["pct"] is not None: bits.append(f"{x['pct']:.0f}% of its {WINDOW.get(x['window'], x['window'])} limit used")
+        bits.append(f"{kilo(x['read'] + x['wrote'])} tokens in this build")
+        parts.append(f"{NAME[a]} {', '.join(bits)}")
+    s = "USAGE: " + "; ".join(parts) + ". "
+    pc, px = u["claude"]["pct"], u["codex"]["pct"]
+    if pc is not None and px is not None:             # the plans differ, so compare how full each one's limit is
+        low, even = ("claude" if pc < px else "codex"), abs(pc - px) < 10
+    else:                                             # no limit numbers yet: compare tokens
+        tc, tx = (u[a]["read"] + u[a]["wrote"] for a in ("claude", "codex"))
+        low, even = ("claude" if tc < tx else "codex"), max(tc, tx) < 1.25 * max(1, min(tc, tx))
+    if even: return s + "That's about even: keep splitting the work half and half."
+    return (s + f"{NAME[low]} has used less, so {NAME[low]} takes the next heavy tasks (writing code, running sims, "
+                "long edits) and the other reviews, until it's even again.")
+
 def last_reply(c):
     out, _, stopped = last_turn(c)
     return out, stopped
@@ -109,10 +162,15 @@ PHASES = ("Work in phases and stop for Dean after each one. For an episode the p
           "draft video; (6) the full render. For other builds, choose sensible phases and list them in your first "
           "turn. Never start a phase Dean hasn't reached (no voice before he's approved the script, no Blender "
           "before he's approved the voice).\n\n"
-          "SPLIT THE WORK: at the start of each phase, Claude posts a short task list for the phase, each task with "
-          "an owner (Claude or Codex), playing to strengths, e.g. one writes the sim while the other writes the "
-          "checks, or one writes the script while the other checks every fact in it. Codex can change the list in "
-          "its reply. Each turn, do your own open tasks, mark them done, and review what the other just did.\n\n"
+          "SPLIT THE WORK EVENLY: Dean wants you both to last as long as possible on your usage limits, so the "
+          "load must be as equal as you can make it. At the start of each phase, Claude posts a short task list for "
+          "the phase, each task with an owner (Claude or Codex): about half the tasks and half the heavy work "
+          "(writing code, running sims, long edits) each, e.g. one writes the sim while the other writes the checks "
+          "and the facts table, or one writes the script while the other checks every fact in it. Claude only keeps "
+          "what only it can do: the git commits and the Blender renders. Each turn starts with a USAGE line showing "
+          "how much both of you have used: if one is ahead, move the next heavy tasks to the other. Codex can change "
+          "the list in its reply. Each turn, do your own open tasks, mark them done, and review what the other just "
+          "did (keep reviews short: a review shouldn't cost more than the work).\n\n"
           "HELP EACH OTHER: if you hit a problem you can't fix in a couple of tries (an error, a wrong number, a "
           "design question), don't keep going round in circles: start that part of your reply with STUCK:, say what "
           "you tried and what you saw, and hand it over. The other one then helps solve it first, before its own "
@@ -139,10 +197,12 @@ def after_review(col, name, decision):
     if decision["action"] == "carry":                  # picking up a build that stopped or paused mid-phase
         said = decision.get("notes") or "Carry on where you left off."
         head = f"Dean is picking the build back up. It had stopped ({col.get('note') or 'stopped'}).\n\n{said}\n\n"
-        col.update(state="running", phase=None, outputs=[], note="")
+        col.update(state="running", phase=None, outputs=[], note=""); col.pop("solo", None); col.pop("away", None)
         return {"claude": head + "Look at where the current phase stands (git status, the files, the other's last "
                                  "reply) and carry on with it.", "codex": head.strip()}
     col["phases_done"].append(name)
+    if col.get("away") and not col["away"].get("until"):     # no reset time known: let it try again next phase
+        col.pop("solo", None); col.pop("away", None)
     said = decision.get("notes") or "Looks good. Go on to the next phase."
     head = f"Dean reviewed \"{name}\" and said:\n\n{said}\n\n"
     col.update(state="running", phase=None, outputs=[])
@@ -164,6 +224,7 @@ async def collaborate(p, task, files, rounds, build=None, resume=None):
     replies = {"claude": None, "codex": None}; lasts = {"claude": "", "codex": ""}
     t = 0; total = 0                     # turns in this phase, turns in all
     note = {}                            # agent -> Dean's review notes it hasn't seen yet
+    solo_msg = "\0"                      # what the one carrying on alone was told (dropped if it never went)
     if resume is not None:
         replies = {a: last_turn(chat(p, a))[0] for a in ("claude", "codex")}; total = 2
         if resume.get("rounds"): col["rounds"] = rounds = resume["rounds"]
@@ -171,15 +232,28 @@ async def collaborate(p, task, files, rounds, build=None, resume=None):
         if note is None: save(); return
     try:
         while True:
-            agent = "claude" if t % 2 == 0 else "codex"; other = "codex" if agent == "claude" else "claude"
+            away = col.get("away")
+            if away and away.get("until") and time.time() >= away["until"]:     # its limit has reset: back in
+                back = away["agent"]; col.pop("away", None); col.pop("solo", None)
+                o = col_other(back)
+                if note.get(o, "").startswith(solo_msg): note[o] = note[o][len(solo_msg):].strip()   # never went alone
+                if not note.get(o): note.pop(o, None)
+                note[back] = (f"Your usage limit has reset, so you're back. While you were out, {NAME[col_other(back)]} "
+                              "carried on alone (its last reply is below): pick your share of the work back up.")
+                if (t % 2 == 0) != (back == "claude"): t += 1          # the one coming back goes next
+            solo = col.get("solo")
+            agent = solo or ("claude" if t % 2 == 0 else "codex"); other = col_other(agent)
             r = t // 2 + 1
             col.update(round=r, turn=agent); save()
             if total < 2:
                 prompt = (build_first(agent, task, rounds, build, replies[other]) if building
                           else first_prompt(agent, task, rounds, replies[other]))
+            elif solo:
+                prompt = f"Your turn (round {r} of {rounds} in this phase), still working alone."
             else:
                 prompt = f"{NAME[other]} replied:\n\n{replies[other]}\n\nYour turn (round {r} of {rounds}" + \
                          (" in this phase)." if building else ").")
+            if building: prompt = balance_note(p) + "\n\n" + prompt
             if agent in note: prompt = note.pop(agent) + "\n\n" + prompt
             waiting = NOTES.get(p["id"], {}).pop(agent, None)
             if waiting: prompt = "Dean's messages to you since your last turn:\n\n" + "\n\n".join(waiting) + "\n\n" + prompt
@@ -192,13 +266,28 @@ async def collaborate(p, task, files, rounds, build=None, resume=None):
             while c["status"] == "running": await asyncio.sleep(1)      # Dean messaged it by hand: wait
             await MOD[agent].turn(c, prompt, files if total < 2 else [])
             replies[agent], last, stopped = last_turn(c); lasts[agent] = last
-            total += 1; t += 1
+            total += 1; t += 2 if solo else 1          # alone, each turn is a whole round
             hit = limit_hit(c)
-            if hit:                                   # don't hand a turn back and forth while one of them can't work
+            if hit and building and not solo:
+                # don't stop the build: the other one carries on alone, and hands back when the limit resets
+                until = back_at(agent, hit)
+                at = f" until about {time.strftime('%H:%M', time.localtime(until))}" if until else ""
+                col.update(solo=other, away=dict(agent=agent, until=until, msg=hit[:160]),
+                           note=f"{NAME[agent]} hit its usage limit{at}; {NAME[other]} carries on alone")
+                solo_msg = (f"{NAME[agent]} has hit its usage limit{at}. Carry on alone with everything you can "
+                            "do (code, sims, checks, the facts table, docs) so the build keeps moving. "
+                            + ("Leave the git commits and Blender renders for Claude: list them at the end of "
+                               "your reply under FOR CLAUDE:. " if other == "codex" else "Make the commits as usual. ")
+                            + "When the phase is done, say PHASE READY.")
+                note[other] = solo_msg + ("\n\n" + note[other] if other in note else "")   # keep Dean's notes
+                if (t % 2 == 0) != (other == "claude"): t += 1
+                save(); continue
+            if hit:                                   # both out (or just talking): pause, don't pass turns back and forth
+                col.pop("solo", None); col.pop("away", None)
                 col.update(state="paused", note=f"{NAME[agent]} hit its usage limit: {hit[:160]}"); return
             if stopped:
                 col.update(state="stopped", note=f"{NAME[agent]}'s turn stopped or failed"); return
-            if starts(last, "AGREED") and starts(lasts[other], "AGREED"):        # both said so, one after the other
+            if starts(last, "AGREED") and (solo or starts(lasts[other], "AGREED")):        # both said so, one after the other
                 col.update(state="agreed", note=f"{'Build finished' if building else 'Both agreed'} (round {r})"); return
             ready = phase_ready(last) if building else None
             if building and (ready or t >= 2 * rounds):
@@ -221,6 +310,9 @@ async def collaborate(p, task, files, rounds, build=None, resume=None):
         for a in ("claude", "codex"):
             if chat(p, a): chat(p, a)["auto"] = False
         TASKS.pop(p["id"], None); CC.save(); save()
+
+def col_other(agent):
+    return "codex" if agent == "claude" else "claude"
 
 def start_collab(p, task, files, rounds):
     TASKS[p["id"]] = asyncio.create_task(collaborate(p, task, files, rounds))

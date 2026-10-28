@@ -189,7 +189,9 @@ label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; al
         <p class="note" id="collabhelp" hidden>Collaborate: type the task in the box, then they take turns on it (Claude first),
           each reading the other's last reply. They stop early when both start a reply with AGREED.<br>
           Build together: the same, but they build it in a separate copy of the repo on a new branch (your main folder
-          isn't touched). Claude writes and commits, Codex reviews and tests. Edits and test runs there don't ask you;
+          isn't touched). They split the work half and half, watching both usage limits (shown at the top of each side), so
+          both last as long as possible; Claude also makes the commits and renders. If one runs out, the other carries
+          on alone until it's back. Edits and test runs there don't ask you;
           Blender, installs, deletes and the internet still do. Nobody pushes: you do.</p>
         <p class="note" id="buildinfo" hidden></p>
         <div class="row" id="videorow" hidden><span>🎬 <b>A video is ready:</b> <span id="videoname"></span></span>
@@ -491,7 +493,17 @@ function setView() {          // build the thread boxes for what's open: one thr
       const pane = el("div", "pane " + a), h = el("div", "who " + a);
       const st = el("span", "meta"); st.id = "st-" + a;
       const b = el("button", "small", "Stop"); b.id = "stop-" + a; b.hidden = true; b.onclick = () => data && stopChat(data[a].id);
-      h.append(NAMES[a], st, el("span", "spacer"), b);
+      const use = el("span", "meta"); use.id = "use-" + a;
+      h.append(NAMES[a], st, el("span", "spacer"), use);
+      if (a === "claude") {        // a cheaper model stretches Claude's usage limit further
+        const sel = el("select"); sel.id = "model-claude"; sel.title = "Claude's model, from its next turn";
+        for (const [v, t] of [["", "Default model"], ["opus", "Opus"], ["sonnet", "Sonnet (lighter)"], ["haiku", "Haiku"]]) {
+          const o = el("option", "", t); o.value = v; sel.append(o);
+        }
+        sel.onchange = () => data && api(`/api/chats/${data.claude.id}/model`, { model: sel.value }).catch((e) => alert(e.message));
+        h.append(sel);
+      }
+      h.append(b);
       const th = el("div", "thread"); th.id = "th-" + a;
       pane.append(h, th); sp.append(pane);
     }
@@ -610,7 +622,13 @@ function drawOpen() {
       drawThread($("#th-" + a), c);
       $("#st-" + a).innerHTML = c ? " · " + (nowLine(c) || "idle") : "";
       $("#stop-" + a).hidden = !r || collab;
+      const u = data.usage?.[a];
+      $("#use-" + a).textContent = u ? [u.pct != null ? `${Math.round(u.pct)}% of ${{ five_hour: "5-hour", seven_day: "weekly" }[u.window] || "its"} limit` : "",
+                                        `${toks(u.read + u.wrote)} tokens`].filter(Boolean).join(" · ") : "";
+      if (col?.away?.agent === a) $("#use-" + a).textContent += " · out of usage";
     }
+    const ms = $("#model-claude");
+    if (ms && document.activeElement !== ms) ms.value = data.claude?.model || "";
     $("#collab").disabled = any || collab; $("#build").disabled = any || collab; $("#crounds").disabled = collab;
     $("#buildinfo").hidden = !p.build;
     if (p.build) $("#buildinfo").textContent = `Build folder: ${p.build.path} (branch ${p.build.branch})`;
@@ -619,7 +637,7 @@ function drawOpen() {
     $("#build").hidden = !$("#carry").hidden;
     const vid = outs.find((o) => /\.mp4$/i.test(o.path) && !/draft/i.test(o.name));
     $("#videorow").hidden = !vid; if (vid) $("#videoname").textContent = where(vid.path);
-    $("#collabnote").textContent = col ? (collab ? (inReview ? "Waiting for you: a phase is ready" : `${col.mode === "build" ? "Building" : "Collaborating"}: round ${col.round} of ${col.rounds}${col.mode === "build" ? " in this phase" : ""}, ${NAMES[col.turn]}'s turn`) : `Last ${col.mode === "build" ? "build" : "collaboration"}: ${col.note}`) : "";
+    $("#collabnote").textContent = col ? (collab ? (inReview ? "Waiting for you: a phase is ready" : col.solo ? `Building: ${col.note}` : `${col.mode === "build" ? "Building" : "Collaborating"}: round ${col.round} of ${col.rounds}${col.mode === "build" ? " in this phase" : ""}, ${NAMES[col.turn]}'s turn`) : `Last ${col.mode === "build" ? "build" : "collaboration"}: ${col.note}`) : "";
   }
   stick = false;
 }
@@ -632,7 +650,8 @@ function longSteps(d) {
 // ---- what a build made: list + preview
 let outs = [], outsAt = 0, outsFor = null;
 const absPath = (o) => /^[A-Za-z]:[\\/]/.test(o) ? o : (data?.pair?.build?.path || "") + "\\" + o.replace(/\//g, "\\");
-const kb = (n) => n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1e3)) + " KB";
+const toks = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : Math.round(n / 1e3) + "k";
+const kb = (n) =>n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1e3)) + " KB";
 async function loadOutputs(force) {
   if (open?.kind !== "pair" || !data?.pair?.build) return;
   if (outsFor !== open.id) { outs = []; outsFor = open.id; force = true; $("#out-list").replaceChildren(); }

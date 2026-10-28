@@ -252,6 +252,18 @@ async def chat_send(cid: str, m: Send):
     task = asyncio.create_task(mod.turn(c, m.prompt.strip(), m.files)); TASKS.add(task); task.add_done_callback(TASKS.discard)
     return {"ok": True}
 
+class Model(BaseModel):
+    model: str = ""              # "" = Claude Code's default
+
+@app.post("/api/chats/{cid}/model")
+def chat_model(cid: str, m: Model):
+    """Which Claude model a chat uses from its next turn (Sonnet stretches the usage limit further than Opus)."""
+    c = CC.CHATS.get(cid)
+    if not c or c.get("agent", "claude") != "claude": raise HTTPException(404, "no such Claude chat")
+    if m.model and m.model not in CC.MODELS: raise HTTPException(400, "opus, sonnet or haiku")
+    c["model"] = m.model or None; CC.save()
+    return {"ok": True}
+
 @app.post("/api/chats/{cid}/stop")
 async def chat_stop(cid: str):
     c = CC.CHATS.get(cid)
@@ -303,7 +315,7 @@ def pair_new():
 @app.get("/api/pairs/{pid}")
 def pair_get(pid: str):
     p = get_pair(pid)
-    return dict(pair=p, claude=public(PC.chat(p, "claude")), codex=public(PC.chat(p, "codex")))
+    return dict(pair=p, claude=public(PC.chat(p, "claude")), codex=public(PC.chat(p, "codex")), usage=PC.usage(p))
 
 @app.post("/api/pairs/{pid}/send")
 async def pair_send(pid: str, m: PairSend):

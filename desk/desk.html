@@ -193,6 +193,7 @@ label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; al
           both last as long as possible; Claude also makes the commits and renders. If one runs out, the other carries
           on alone until it's back. Edits and test runs there don't ask you;
           Blender, installs, deletes and the internet still do. Nobody pushes: you do.</p>
+        <div class="row" id="etarow" hidden><span>🎞️ <b id="eta"></b></span></div>
         <p class="note" id="buildinfo" hidden></p>
         <div class="row" id="videorow" hidden><span>🎬 <b>A video is ready:</b> <span id="videoname"></span></span>
           <button class="both" id="studio">Open the posting studio</button></div>
@@ -637,6 +638,15 @@ function drawOpen() {
     $("#build").hidden = !$("#carry").hidden;
     const vid = outs.find((o) => /\.mp4$/i.test(o.path) && !/draft/i.test(o.name));
     $("#videorow").hidden = !vid; if (vid) $("#videoname").textContent = where(vid.path);
+    const rn = data.render;                       // Blender rendering for this build: how far, how long to go
+    $("#etarow").hidden = !rn;
+    if (rn) {
+      const mins = (s) => s < 90 ? `${Math.round(s)} s` : s < 5400 ? `${Math.round(s / 60)} min` : `${(s / 3600).toFixed(1)} h`;
+      const at = rn.finish ? new Date(rn.finish * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+      $("#eta").textContent = `Rendering ${rn.folder}: frame ${rn.done.toLocaleString()}${rn.total ? " of " + rn.total.toLocaleString() : ""}`
+        + (rn.per ? ` · ${rn.per.toFixed(1)} s/frame` : "")
+        + (rn.left != null ? ` · about ${mins(rn.left)} left (done ~${at})` : " · time left unknown until the total is known");
+    }
     $("#collabnote").textContent = col ? (collab ? (inReview ? "Waiting for you: a phase is ready" : col.solo ? `Building: ${col.note}` : `${col.mode === "build" ? "Building" : "Collaborating"}: round ${col.round} of ${col.rounds}${col.mode === "build" ? " in this phase" : ""}, ${NAMES[col.turn]}'s turn`) : `Last ${col.mode === "build" ? "build" : "collaboration"}: ${col.note}`) : "";
   }
   stick = false;

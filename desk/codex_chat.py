@@ -138,6 +138,8 @@ async def approve(chat, method, p):
 def on_event(chat, method, p):
     t = chat.get("_turn")
     if not t: return
+    if method == "item/agentMessage/delta":                 # Codex's words as it writes them
+        chat["_live"] = chat.get("_live", "") + (p.get("delta") or ""); return
     item = p.get("item") or {}; kind = item.get("type"); iid = item.get("id")
     if method == "item/started":
         t["items"][iid] = item
@@ -152,8 +154,9 @@ def on_event(chat, method, p):
             t["events"][iid] = CC.add(chat, "tool", what=f"{item.get('server')}: {item.get('tool')}", out=None, ok=None)
     elif method == "item/completed":
         t["items"][iid] = item
-        if kind == "agentMessage" and (item.get("text") or "").strip():
-            CC.add(chat, "text", text=item["text"])
+        if kind == "agentMessage":
+            chat["_live"] = ""
+            if (item.get("text") or "").strip(): CC.add(chat, "text", text=item["text"])
         elif iid in t["events"]:
             e = t["events"][iid]
             if kind == "commandExecution":
@@ -211,7 +214,20 @@ async def turn(chat, prompt, files):
     finally:
         for pid, (cid, fut) in list(CC.PERMS.items()):
             if cid == chat["id"] and not fut.done(): fut.set_result("deny")
-        chat.pop("_turn", None); chat["status"] = "idle"; CC.save()
+        chat.pop("_turn", None); chat["_live"] = ""; chat["status"] = "idle"; CC.save()
+
+async def steer(chat, text, files=()):
+    """A message from Dean while Codex is working: added to the running turn (turn/steer)."""
+    t = chat.get("_turn")
+    if not t or not t.get("id"): return False
+    full = text + ("\n\nFiles I attached: " + ", ".join(f"desk/uploads/{f}" for f in files) if files else "")
+    try:
+        await SERVER.call("turn/steer", {"threadId": chat["session_id"], "expectedTurnId": t["id"],
+                                         "input": [{"type": "text", "text": "Dean, while you were working: " + full}]})
+    except Exception:
+        return False                                           # the turn just ended: send it as a new message
+    CC.add(chat, "dean", text=text, files=list(files), how="sent while working"); CC.save()
+    return True
 
 async def stop(chat_id):
     chat = CC.CHATS.get(chat_id)

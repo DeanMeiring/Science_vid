@@ -99,6 +99,28 @@ label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; al
 .outview audio { width: 100%; margin-top: 6px; }
 .outview pre { white-space: pre-wrap; max-height: 65vh; overflow: auto; font-size: 13px; background: var(--bg); padding: 8px; border-radius: 8px; }
 #review { margin-top: 12px; }
+.ev.dean { text-align: right; }
+.ev.dean .bubble { display: inline-block; text-align: left; background: var(--bg); border: 1px dashed var(--accent); }
+.ev.dean .how { font-size: 11px; color: var(--muted); }
+.bubble.live { opacity: .85; }
+.bubble.live::after { content: "▍"; animation: pulse 1s infinite; }
+.nowline { font-size: 13px; color: var(--muted); margin: 2px 0 6px; min-height: 1.2em; }
+.nowline b { color: var(--ink); font-weight: 600; }
+#progressbox { margin-top: 10px; }
+#progressbox .bubble { background: none; padding: 4px 0 0; }
+.outcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; margin-top: 8px; }
+.ocard { border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; min-width: 0; background: var(--card); }
+.ocard .oh { display: flex; gap: 6px; align-items: baseline; font-size: 13px; font-weight: 600; word-break: break-all; }
+.ocard .oh a { font-weight: 400; font-size: 12px; margin-left: auto; white-space: nowrap; }
+.ocard .m { color: var(--muted); font-size: 11px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ocard img, .ocard video { max-width: 100%; max-height: 220px; display: block; margin-top: 6px; border-radius: 8px; }
+.ocard audio { width: 100%; margin-top: 6px; }
+.ocard pre, .ocard .md { max-height: 200px; overflow: auto; font-size: 12px; background: var(--bg); padding: 6px 8px;
+                         border-radius: 8px; margin: 6px 0 0; white-space: pre-wrap; }
+.md table { border-collapse: collapse; margin: 4px 0; font-size: 12px; }
+.md td, .md th { border: 1px solid var(--line); padding: 2px 6px; vertical-align: top; }
+.md h4 { margin: 6px 0 2px; font-size: 13px; }
+#review .outcards { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
 .working { color: var(--muted); font-size: 13px; margin-top: 10px; animation: pulse 1.4s infinite; }
 #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--accent); color: var(--bg);
          padding: 8px 14px; border-radius: 10px; display: none; max-width: 90vw; }
@@ -128,13 +150,16 @@ label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; al
       <section class="card" style="min-width:0">
         <div class="row" style="margin-top:0">
           <strong id="chattitle">Pick a chat or start a new one</strong><span class="spacer"></span>
+          <button class="small" id="progress" hidden>Progress?</button>
           <button class="small" id="delchat" hidden>Delete</button>
         </div>
+        <div class="nowline" id="solonow"></div>
+        <div id="progressbox" class="perm" hidden></div>
         <div id="views"></div>
         <div id="review" class="perm" hidden>
           <div style="font-size:16px"><b>Phase ready for you:</b> <span id="rv-phase"></span></div>
           <div class="note" id="rv-by"></div>
-          <div class="files" id="rv-outs"></div>
+          <div class="outcards" id="rv-outs"></div>
           <div class="note">Look at the outputs (they open in the Outputs panel below). To ask for changes, type them in
             the box, then press Continue. Or just press Continue to go on to the next phase.</div>
           <div class="row"><button class="both" id="rv-go">Continue</button><button id="rv-stop">End the build here</button></div>
@@ -169,8 +194,7 @@ label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; al
         <div id="outputs" hidden>
           <div class="row"><strong>Outputs from this build</strong><span class="note" style="margin:0">newest first; ★ = what they pointed you to</span>
             <span class="spacer"></span><button class="small" id="out-refresh">Refresh</button></div>
-          <div class="outgrid"><div class="outlist" id="out-list"></div>
-            <div class="outview" id="out-view"><p class="note" style="margin:0">Click a file to see it here.</p></div></div>
+          <div class="outcards" id="out-list"></div>
         </div>
       </section>
     </div>
@@ -350,7 +374,7 @@ document.querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => {
 $("#cattach").onclick = () => $("#cfile").click();
 $("#cfile").onchange = async (e) => { await uploadAll(e.target.files, cattached); e.target.value = ""; drawChips($("#cattached"), cattached); };
 function clearComposer() { $("#cprompt").value = ""; cattached = []; drawChips($("#cattached"), cattached); stick = true; }
-async function openItem(kind, id) { open = id ? { kind, id } : null; data = null; lastData = ""; stick = true; setView(); await pollChats(true); }
+async function openItem(kind, id) { $("#progressbox").hidden = true; open = id ? { kind, id } : null; data = null; lastData = ""; stick = true; setView(); await pollChats(true); }
 
 document.querySelectorAll("[data-new]").forEach((b) => b.onclick = async () => {
   try { const c = await api("/api/chats", { agent: b.dataset.new }); await openItem("chat", c.id); $("#cprompt").focus(); }
@@ -369,13 +393,20 @@ async function sendSolo() {
   if (!prompt) return toast("Type a message first");
   try {
     if (!open) { const c = await api("/api/chats", { agent: "claude" }); await openItem("chat", c.id); }
-    await api(`/api/chats/${open.id}/send`, { prompt, files: cattached }); clearComposer(); await pollChats(true);
+    const r = await api(`/api/chats/${open.id}/send`, { prompt, files: cattached });
+    if (r.steered) toast("Sent: it gets this while it works");
+    clearComposer(); await pollChats(true);
   } catch (e) { toast(e.message); }
 }
 async function sendPair(to) {
   const prompt = $("#cprompt").value.trim();
   if (!prompt) return toast("Type a message first");
-  try { await api(`/api/pairs/${open.id}/send`, { prompt, files: cattached, to }); clearComposer(); await pollChats(true); }
+  try {
+    const r = await api(`/api/pairs/${open.id}/send`, { prompt, files: cattached, to });
+    const say = { "now": "gets it now", "next turn": "gets it on its next turn", "new turn": "is on it" };
+    toast(Object.entries(r.how || {}).map(([a, h]) => `${NAMES[a]} ${say[h] || h}`).join(" · "));
+    clearComposer(); await pollChats(true);
+  }
   catch (e) { toast(e.message); }
 }
 $("#csend").onclick = sendSolo;
@@ -458,6 +489,26 @@ function setView() {          // build the thread boxes for what's open: one thr
                                      : "Message... (Ctrl+Enter to send)";
 }
 
+function took(t) { const s = Math.max(0, Math.round(Date.now() / 1000 - t)); return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`; }
+function nowLine(c) {        // what it's doing this moment, like a status line
+  if (!c || c.status !== "running") return "";
+  if (c.events.some((e) => e.type === "perm" && e.state === "waiting")) return "<b>Waiting for you</b> (a card)";
+  const step = [...c.events].reverse().find((e) => e.type === "tool" && e.out === null);
+  if (step) return `Now: <b>${esc(step.what.split("\n")[0].slice(0, 90))}</b> · ${took(step.t)}`;
+  return c.live ? "Now: <b>writing</b>" : "Now: <b>thinking</b>";
+}
+$("#progress").onclick = async () => {
+  const box = $("#progressbox"); box.hidden = false;
+  box.replaceChildren(el("div", "working", "Asking for a progress update… (about 15 s)"));
+  try {
+    const r = await api("/api/progress", { kind: open.kind, id: open.id });
+    const head = el("div", "row"); head.style.marginTop = "0";
+    head.append(el("strong", null, `Progress at ${new Date(r.at * 1000).toLocaleTimeString()}`), el("span", "spacer"));
+    const x = el("button", "small", "×"); x.onclick = () => { box.hidden = true; }; head.append(x);
+    const b = el("div", "bubble"); b.innerHTML = mdLite(r.text);
+    box.replaceChildren(head, b);
+  } catch (e) { box.replaceChildren(el("div", "note err", e.message)); }
+};
 const LONG_MIN = 3;           // minutes before a running step gets the "may be stuck" warning
 const PERM_DONE = { once: "✓ Allowed once", always: "✓ Allowed for the rest of this chat", deny: "✗ Denied", expired: "✗ Not answered in time" };
 function drawThread(th, chat) {
@@ -469,6 +520,8 @@ function drawThread(th, chat) {
   chat.events.forEach((e, i) => {
     const d = el("div", `ev ${e.type} ${chat.agent || "claude"}`);
     if (e.type === "user") d.append(el("div", "bubble", e.text + (e.files?.length ? `\n📎 ${e.files.join(", ")}` : "")));
+    else if (e.type === "dean") { const b = el("div", "bubble", e.text + (e.files?.length ? `\n📎 ${e.files.join(", ")}` : ""));
+      d.append(b, el("div", "how", e.how === "for its next turn" ? "you · it gets this on its next turn" : "you · sent while it was working")); }
     else if (e.type === "text") { const b = el("div", "bubble"); b.innerHTML = fmt(e.text); d.append(b); }
     else if (e.type === "tool") {
       const det = el("details", "tool"); det.dataset.k = "t" + i; det.open = opened.has("t" + i);
@@ -501,21 +554,24 @@ function drawThread(th, chat) {
     else if (e.type === "done") d.append(el("div", "note", `Finished in ${e.seconds}s`));
     th.append(d);
   });
-  if (chat.status === "running" && !chat.events.some((e) => e.type === "perm" && e.state === "waiting"))
+  if (chat.live) { const d = el("div", `ev text ${chat.agent || "claude"}`), b = el("div", "bubble live"); b.innerHTML = fmt(chat.live); d.append(b); th.append(d); }
+  else if (chat.status === "running" && !chat.events.some((e) => e.type === "perm" && e.state === "waiting"))
     th.append(el("div", "working", `${name} is working…`));
   if (stick || near) th.scrollTop = th.scrollHeight;
 }
 
 function drawOpen() {
-  $("#delchat").hidden = !data;
+  $("#delchat").hidden = !data; $("#progress").hidden = !data;
   if (!open || !data) {
     $("#chattitle").textContent = "Pick a chat or start a new one";
     const th = $("#th-solo"); if (th) th.replaceChildren();
-    $("#cstop").hidden = true; $("#csend").disabled = false; return;
+    $("#cstop").hidden = true; $("#csend").disabled = false; $("#solonow").textContent = ""; $("#progress").hidden = true; return;
   }
   if (open.kind === "chat") {
     $("#chattitle").textContent = data.title; drawThread($("#th-solo"), data);
-    const r = data.status === "running"; $("#cstop").hidden = !r; $("#csend").disabled = r;
+    const r = data.status === "running"; $("#cstop").hidden = !r;
+    $("#csend").textContent = r ? "Send now (it's working)" : "Send";
+    $("#solonow").innerHTML = nowLine(data);
   } else {
     const p = data.pair, col = p.collab, collab = ["running", "review"].includes(col?.state);
     const inReview = col?.state === "review";
@@ -523,9 +579,12 @@ function drawOpen() {
     if (inReview) {
       $("#rv-phase").textContent = col.phase;
       $("#rv-by").textContent = `${NAMES[col.by] || ""} says this phase is done. ${col.phases_done?.length ? "Done so far: " + col.phases_done.join(" → ") : ""}`;
-      const box = $("#rv-outs"); box.replaceChildren();
-      for (const o of col.outputs || []) { const b = el("button", "small", "★ " + o); b.onclick = () => showFile(absPath(o)); box.append(b); }
-      if (!(col.outputs || []).length) box.append(el("span", "note", "No files named; see their message in the panes."));
+      const box = $("#rv-outs"); if (drawOpen.reviewKey !== JSON.stringify([col.phase, col.outputs])) box.replaceChildren();
+      if (drawOpen.reviewKey !== JSON.stringify([col.phase, col.outputs])) {   // build the previews once per review
+        drawOpen.reviewKey = JSON.stringify([col.phase, col.outputs]);
+        for (const o of col.outputs || []) box.append(previewCard(absPath(o), "★ " + o.split(/[\\/]/).pop(), where(absPath(o))));
+      }
+      if (!(col.outputs || []).length && !box.childElementCount) box.append(el("span", "note", "No files named; see their message in the panes."));
       if (!drawOpen.wasReview) loadOutputs(true);
     }
     drawOpen.wasReview = inReview;
@@ -535,11 +594,9 @@ function drawOpen() {
     for (const a of ["claude", "codex"]) {
       const c = data[a], r = c?.status === "running"; any = any || r;
       drawThread($("#th-" + a), c);
-      $("#st-" + a).textContent = r ? (c.events.some((e) => e.type === "perm" && e.state === "waiting") ? " · needs you" : " · working") : "";
+      $("#st-" + a).innerHTML = c ? " · " + (nowLine(c) || "idle") : "";
       $("#stop-" + a).hidden = !r || collab;
-      document.querySelector(`[data-to="${a}"]`).disabled = r || collab;
     }
-    document.querySelector('[data-to="both"]').disabled = any || collab;
     $("#collab").disabled = any || collab; $("#build").disabled = any || collab; $("#crounds").disabled = collab;
     $("#buildinfo").hidden = !p.build;
     if (p.build) $("#buildinfo").textContent = `Build folder: ${p.build.path} (branch ${p.build.branch})`;
@@ -552,49 +609,68 @@ function drawOpen() {
 function longSteps(d) {
   const cs = d.events ? [d] : [d.claude, d.codex];
   return cs.map((c) => (c?.events || []).filter((e) => e.type === "tool" && e.out === null)
-                       .map((e) => Math.floor((Date.now() / 1000 - e.t) / 60)).join(",")).join("|");
+                       .map((e) => Math.floor((Date.now() / 1000 - e.t) / 10)).join(",")).join("|");
 }
 // ---- what a build made: list + preview
-let outs = [], outSel = null, outsAt = 0, outsFor = null;
+let outs = [], outsAt = 0, outsFor = null;
 const absPath = (o) => /^[A-Za-z]:[\\/]/.test(o) ? o : (data?.pair?.build?.path || "") + "\\" + o.replace(/\//g, "\\");
 const kb = (n) => n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1e3)) + " KB";
 async function loadOutputs(force) {
   if (open?.kind !== "pair" || !data?.pair?.build) return;
-  if (outsFor !== open.id) { outs = []; outSel = null; outsFor = open.id; force = true; $("#out-view").replaceChildren(el("p", "note", "Click a file to see it here.")); }
+  if (outsFor !== open.id) { outs = []; outsFor = open.id; force = true; $("#out-list").replaceChildren(); }
   if (!force && Date.now() - outsAt < 10000) return;
   outsAt = Date.now();
   try { const o = await api(`/api/pairs/${open.id}/outputs`); if (JSON.stringify(o) !== JSON.stringify(outs)) { outs = o; drawOutputs(); } } catch (e) {}
 }
 $("#out-refresh").onclick = () => loadOutputs(true);
+function where(path) {
+  const base = (data?.pair?.build?.path || "").toLowerCase();
+  return path.toLowerCase().startsWith(base) ? path.slice(base.length + 1) : path.replace(/^.*?\\renders\\/i, "renders\\");
+}
 function drawOutputs() {
   const box = $("#out-list"); box.replaceChildren();
   if (!outs.length) { box.append(el("p", "note", "Nothing yet.")); return; }
-  const base = (data?.pair?.build?.path || "").toLowerCase();
-  for (const o of outs) {
-    const b = el("button", o.path === outSel ? "on" : "", (o.flag ? "★ " : "") + o.name);
-    const where = o.path.toLowerCase().startsWith(base) ? o.path.slice(base.length + 1) : o.path.replace(/^.*?\\renders\\/i, "renders\\");
-    b.append(el("span", "m", `${where} · ${kb(o.size)} · ${new Date(o.mtime * 1000).toLocaleTimeString()}`));
-    b.onclick = () => showFile(o.path); box.append(b);
-  }
+  for (const o of outs.slice(0, 40)) box.append(previewCard(o.path, (o.flag ? "★ " : "") + o.name,
+    `${where(o.path)} · ${kb(o.size)} · ${new Date(o.mtime * 1000).toLocaleTimeString()}`, o.mtime));
+  if (outs.length > 40) box.append(el("p", "note", `…and ${outs.length - 40} older files`));
 }
-async function showFile(path) {
-  outSel = path; drawOutputs();
-  const v = $("#out-view"); v.replaceChildren();
-  const url = `/api/file?path=${encodeURIComponent(path)}`, ext = path.split(".").pop().toLowerCase();
-  const head = el("div", "row"); head.style.marginTop = "0";
-  head.append(el("strong", null, path.split(/[\\/]/).pop()), el("span", "spacer"));
-  const a = el("a", "note", "open in a new tab"); a.href = url; a.target = "_blank"; head.append(a);
-  v.append(head, el("div", "note", path));
-  if (["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext)) { const i = el("img"); i.src = url + "&t=" + Date.now(); v.append(i); }
-  else if (["wav", "mp3", "ogg", "m4a", "flac"].includes(ext)) { const au = el("audio"); au.controls = true; au.src = url; v.append(au); }
-  else if (["mp4", "webm", "mov", "m4v"].includes(ext)) { const vi = el("video"); vi.controls = true; vi.src = url; v.append(vi); }
-  else {
-    try {
-      const r = await fetch(url); if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
-      const size = +r.headers.get("content-length") || 0;
-      v.append(el("pre", null, size > 400000 ? "(too big to show here: open it in VS Code)" : await r.text()));
-    } catch (e) { v.append(el("p", "note err", "Couldn't open it: " + e.message)); }
+function mdLite(src) {      // enough Markdown for facts tables and notes: headings, bullets, tables, bold, code
+  const lines = src.split(/\r?\n/), out = []; let tbl = null;
+  const cells = (l) => l.trim().replace(/^\||\|$/g, "").split("|").map((c) => fmt(c.trim()));
+  for (const l of lines) {
+    if (/^\s*\|/.test(l)) {
+      if (/^\s*\|?[\s:|-]+\|?\s*$/.test(l)) continue;                    // the |---| row
+      const row = cells(l); if (!tbl) { tbl = []; tbl.head = row; } else tbl.push(row); continue;
+    }
+    if (tbl) { out.push(`<table><tr>${tbl.head.map((c) => `<th>${c}</th>`).join("")}</tr>${tbl.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</table>`); tbl = null; }
+    const h = l.match(/^#{1,6}\s+(.*)/);
+    if (h) out.push(`<h4>${fmt(h[1])}</h4>`);
+    else if (/^\s*[-*]\s+/.test(l)) out.push("• " + fmt(l.replace(/^\s*[-*]\s+/, "")) + "<br>");
+    else out.push(fmt(l) + "<br>");
   }
+  if (tbl) out.push(`<table><tr>${tbl.head.map((c) => `<th>${c}</th>`).join("")}</tr>${tbl.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</table>`);
+  return out.join("");
+}
+const IMG = ["png", "jpg", "jpeg", "gif", "webp", "svg"], AUD = ["wav", "mp3", "ogg", "m4a", "flac"], VID = ["mp4", "webm", "mov", "m4v"];
+function previewCard(path, title, meta, ver) {
+  const c = el("div", "ocard"), ext = path.split(".").pop().toLowerCase();
+  const url = `/api/file?path=${encodeURIComponent(path)}` + (ver ? `&v=${Math.round(ver)}` : "");
+  const h = el("div", "oh"); h.append(el("span", null, title));
+  const a = el("a", null, "open ↗"); a.href = url; a.target = "_blank"; h.append(a); c.append(h);
+  if (meta) c.append(el("span", "m", meta));
+  if (IMG.includes(ext)) { const i = el("img"); i.loading = "lazy"; i.src = url; c.append(i); }
+  else if (AUD.includes(ext)) { const au = el("audio"); au.controls = true; au.preload = "none"; au.src = url; c.append(au); }
+  else if (VID.includes(ext)) { const v = el("video"); v.controls = true; v.preload = "metadata"; v.src = url; c.append(v); }
+  else {
+    const box = el(ext === "md" ? "div" : "pre", ext === "md" ? "md" : null, "loading…"); c.append(box);
+    fetch(url, { headers: { Range: "bytes=0-6000" } }).then(async (r) => {
+      if (!r.ok && r.status !== 206) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+      let t = await r.text(); const cut = r.status === 206 && t.length >= 6000;
+      if (cut) t = t.slice(0, t.lastIndexOf("\n")) + "\n…";
+      if (ext === "md") box.innerHTML = mdLite(t); else box.textContent = t;
+    }).catch((e) => { box.textContent = "Couldn't open it: " + e.message; });
+  }
+  return c;
 }
 $("#rv-go").onclick = async () => {
   try { await api(`/api/pairs/${open.id}/review`, { action: "continue", notes: $("#cprompt").value.trim() }); clearComposer(); await pollChats(true); }

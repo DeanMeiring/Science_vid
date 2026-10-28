@@ -21,6 +21,7 @@ STORE = CC.HERE / "pairs.json"
 PAIRS = {}                       # id -> pair dict
 TASKS = {}                       # pair id -> the running collaboration task
 REVIEWS = {}                     # pair id -> future Dean's Continue / Stop resolves
+NOTES = {}                       # pair id -> {agent: [Dean's messages waiting for its next turn]}
 NAME = {"claude": "Claude", "codex": "Codex"}
 MOD = {"claude": CC, "codex": XC}
 MAX_REPLY = 6000                 # characters of one agent's reply passed to the other
@@ -29,7 +30,7 @@ def load():
     if STORE.exists():
         try:
             for p in json.loads(STORE.read_text(encoding="utf-8")):
-                if p.get("collab") and p["collab"]["state"] in ("running", "review"):
+                if p.get("collab") and p["collab"]["state"] == "running":      # a review that was waiting still is
                     p["collab"]["state"] = "stopped"; p["collab"]["note"] = "the desk restarted"
                 PAIRS[p["id"]] = p
         except ValueError:
@@ -120,16 +121,35 @@ def build_first(agent, task, rounds, context, other_reply=None):
     if other_reply is None: return s + "\n\nYou go first: list the phases, then the task list for phase 1, then start yours."
     return s + f"\n\n{other} went first and said:\n\n{other_reply}\n\nYour turn (round 1 of {rounds})."
 
-async def collaborate(p, task, files, rounds, build=None):
-    """build=None: talk it through. build=str (earlier agreement, may be empty): build it in phases."""
-    building = build is not None
-    col = p["collab"] = dict(task=task, rounds=rounds, round=1, turn="claude", state="running", note="",
-                             mode="build" if building else "talk", phase=None, outputs=[], phases_done=[])
+def after_review(col, name, decision):
+    """Dean answered a PHASE READY: the notes each agent gets next, or None if he ended the build."""
+    if decision["action"] == "stop":
+        col.update(state="done", note=f"Dean ended the build after: {name}"); return None
+    col["phases_done"].append(name)
+    said = decision.get("notes") or "Looks good. Go on to the next phase."
+    head = f"Dean reviewed \"{name}\" and said:\n\n{said}\n\n"
+    col.update(state="running", phase=None, outputs=[])
+    return {"claude": head + "Start the next round: act on Dean's notes (or go on to the next phase, with its task list).",
+            "codex": head.strip()}
+
+async def collaborate(p, task, files, rounds, build=None, resume=None):
+    """build=None: talk it through. build=str (earlier agreement, may be empty): build it in phases.
+    resume={action, notes}: carry on a build whose review was answered after the desk restarted."""
+    building = build is not None or resume is not None
+    if resume is None:
+        col = p["collab"] = dict(task=task, rounds=rounds, round=1, turn="claude", state="running", note="",
+                                 mode="build" if building else "talk", phase=None, outputs=[], phases_done=[])
+    else:
+        col = p["collab"]
     for a in ("claude", "codex"): chat(p, a)["auto"] = building
     save()
     replies = {"claude": None, "codex": None}; lasts = {"claude": "", "codex": ""}
     t = 0; total = 0                     # turns in this phase, turns in all
     note = {}                            # agent -> Dean's review notes it hasn't seen yet
+    if resume is not None:
+        replies = {a: last_turn(chat(p, a))[0] for a in ("claude", "codex")}; total = 2
+        note = after_review(col, col.get("phase") or "the last phase", resume)
+        if note is None: save(); return
     try:
         while True:
             agent = "claude" if t % 2 == 0 else "codex"; other = "codex" if agent == "claude" else "claude"
@@ -142,6 +162,8 @@ async def collaborate(p, task, files, rounds, build=None):
                 prompt = f"{NAME[other]} replied:\n\n{replies[other]}\n\nYour turn (round {r} of {rounds}" + \
                          (" in this phase)." if building else ").")
             if agent in note: prompt = note.pop(agent) + "\n\n" + prompt
+            waiting = NOTES.get(p["id"], {}).pop(agent, None)
+            if waiting: prompt = "Dean's messages to you since your last turn:\n\n" + "\n\n".join(waiting) + "\n\n" + prompt
             if not building and r == rounds and agent == "codex":
                 prompt += " This is the last turn: finish up and sum up what was done and what's left for Dean."
             if building and r == rounds and agent == "codex":
@@ -163,14 +185,9 @@ async def collaborate(p, task, files, rounds, build=None):
                 fut = REVIEWS[p["id"]] = asyncio.get_running_loop().create_future()
                 decision = await fut
                 REVIEWS.pop(p["id"], None)
-                if decision["action"] == "stop":
-                    col.update(state="done", note=f"Dean ended the build after: {name}"); return
-                col["phases_done"].append(name)
-                said = decision.get("notes") or "Looks good. Go on to the next phase."
-                head = f"Dean reviewed \"{name}\" and said:\n\n{said}\n\n"
-                note = {"claude": head + "Start the next round: act on Dean's notes (or go on to the next phase, with "
-                                         "its task list).", "codex": head.strip()}
-                col.update(state="running", phase=None, outputs=[]); t = 0; lasts = {"claude": "", "codex": ""}
+                note = after_review(col, name, decision)
+                if note is None: return
+                t = 0; lasts = {"claude": "", "codex": ""}
                 continue
             if not building and t >= 2 * rounds:
                 col.update(state="done", note=f"Finished {rounds} round{'s' if rounds > 1 else ''}"); return
@@ -186,12 +203,61 @@ async def collaborate(p, task, files, rounds, build=None):
 def start_collab(p, task, files, rounds):
     TASKS[p["id"]] = asyncio.create_task(collaborate(p, task, files, rounds))
 
+def queue(p, agent, text, files=()):
+    """A message from Dean for an agent that's waiting for its turn in a collaboration."""
+    full = text + ("\n(Files: " + ", ".join(f"desk/uploads/{f}" for f in files) + ")" if files else "")
+    NOTES.setdefault(p["id"], {}).setdefault(agent, []).append(full)
+    CC.add(chat(p, agent), "dean", text=text, files=list(files), how="for its next turn"); CC.save()
+
+# ---------------- progress updates ----------------
+def digest_chat(c, n=30):
+    """The last steps of a chat as compact text, for a progress summary."""
+    now = time.time(); rows = [f"{NAME.get(c.get('agent'), 'Claude')}: {'WORKING' if c['status'] == 'running' else 'idle'}"]
+    for e in c["events"][-n:]:
+        at = time.strftime("%H:%M:%S", time.localtime(e["t"]))
+        if e["type"] == "tool":
+            state = "RUNNING for %ds" % (now - e["t"]) if e.get("out") is None and c["status"] == "running" else \
+                    ("ok" if e.get("ok") else "failed")
+            rows.append(f"{at} step: {e['what'][:200]} [{state}]" + (f" -> {e['out'][:300]}" if e.get("out") else ""))
+        elif e["type"] == "perm": rows.append(f"{at} asked Dean: {e['what'][:200]} [{e['state']}]")
+        elif e["type"] in ("text", "user", "dean", "error"): rows.append(f"{at} {e['type']}: {e.get('text', '')[:900]}")
+        elif e["type"] == "done": rows.append(f"{at} turn finished")
+    if c.get("_live"): rows.append(f"now writing: {c['_live'][-600:]}")
+    return "\n".join(rows)
+
+def digest_pair(p):
+    col = p.get("collab") or {}
+    head = (f"{'Build' if col.get('mode') == 'build' else 'Collaboration'} on: {col.get('task', '')[:300]}\n"
+            f"state: {col.get('state')}, round {col.get('round')} of {col.get('rounds')}, {col.get('turn')}'s turn; "
+            f"phase waiting for Dean: {col.get('phase')}; phases done: {col.get('phases_done')}") if col else "no collaboration"
+    return head + "\n\n" + "\n\n".join(digest_chat(chat(p, a), 25) for a in ("claude", "codex") if chat(p, a))
+
+async def summarise(digest):
+    from claude_agent_sdk import AssistantMessage as AM, ClaudeAgentOptions as Opts, TextBlock as TB, query
+    import shutil
+    ask = ("Dean is watching Claude and/or Codex work on his science-video project from a local page, and asks "
+           "\"how's it going?\". From the log below, answer in 3 to 6 short bullets of plain English: where they are "
+           "(phase, round, whose turn), what they're doing right now and for how long, what's done, anything stuck, "
+           "failing or waiting for Dean, and what comes next. Use the numbers from the log; don't guess. Builds already "
+           "run on their own branch in a separate folder, so don't comment on git or process rules. Times are "
+           f"local; it's now {time.strftime('%H:%M:%S')}.\n\nLOG:\n{digest}")
+    out = []
+    async for m in query(prompt=ask, options=Opts(model="haiku", max_turns=1, allowed_tools=[], setting_sources=[],
+                                                  cli_path=shutil.which("claude"), cwd=str(CC.HERE))):
+        if isinstance(m, AM): out += [b.text for b in m.content if isinstance(b, TB)]
+    return "\n".join(out).strip() or "(no answer)"
+
 def review(p, action, notes):
-    """Dean's answer to PHASE READY: continue (with optional notes) or stop."""
+    """Dean's answer to PHASE READY: continue (with optional notes) or stop. Call it from the event loop."""
+    decision = {"action": action, "notes": notes.strip()}
     f = REVIEWS.get(p["id"])
-    if not f or f.done(): return False
-    f.set_result({"action": action, "notes": notes.strip()})
-    return True
+    if f and not f.done():
+        f.set_result(decision); return True
+    col = p.get("collab") or {}
+    if col.get("state") == "review" and p["id"] not in TASKS:            # the desk restarted while it waited
+        TASKS[p["id"]] = asyncio.create_task(collaborate(p, col["task"], [], col["rounds"], resume=decision))
+        return True
+    return False
 
 # ---------------- building together ----------------
 BUILDS = CC.ROOT.parent / "Science_vid_builds"

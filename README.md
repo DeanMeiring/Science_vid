@@ -90,6 +90,18 @@ and Instagram. It only runs on this laptop; logins are kept in `.tokens/`
 3. Put `INSTAGRAM_APP_ID=...` and `INSTAGRAM_APP_SECRET=...` in `.env`
    (optional: `INSTAGRAM_FB_CONFIG_ID=...`).
 
+## Agent desk: ask Claude and Codex
+
+```
+.venv/Scripts/python desk/app.py          # then open http://localhost:8770
+```
+
+One page on this laptop to ask Claude Code, Codex or both the same question (with files attached), and a
+"You two talk to each other" button: they take turns on a topic, reading the conversation so far, and stop
+when they agree. It drives the `claude` and `codex` command-line tools you're already logged in to (no extra
+cost). Read-only unless "Allow file edits" is ticked; it never pushes, merges or posts. It only listens on
+127.0.0.1: never put it on the internet. Uploads and history stay in `desk/` (gitignored).
+
 ## Run the prototypes
 
 ```
